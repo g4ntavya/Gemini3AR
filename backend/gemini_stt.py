@@ -2,7 +2,7 @@
 Gemini Speech-to-Text + Extraction Service
 ==========================================
 
-Uses the official Google GenAI SDK with gemini-3-flash-preview model.
+Uses google-generativeai SDK with gemini-1.5-flash model.
 
 Features:
 - Transcribes audio (any language: English, Hindi, Hinglish)
@@ -12,26 +12,15 @@ Features:
 import base64
 import json
 import re
-import os
 from typing import Optional
 from dataclasses import dataclass
 
-from google import genai
+import google.generativeai as genai
 
 from config import GEMINI_API_KEY, GEMINI_MODEL
 
-# Initialize the GenAI client
-_client: Optional[genai.Client] = None
-
-
-def get_client() -> genai.Client:
-    """Get the GenAI client instance."""
-    global _client
-    if _client is None:
-        # Set API key via environment variable for the client
-        os.environ["GOOGLE_API_KEY"] = GEMINI_API_KEY
-        _client = genai.Client()
-    return _client
+# Configure the API
+genai.configure(api_key=GEMINI_API_KEY)
 
 
 @dataclass
@@ -50,16 +39,7 @@ async def transcribe_and_extract_with_gemini(
     mime_type: str = "audio/webm"
 ) -> TranscriptionResult:
     """
-    Transcribe audio and extract structured info using Gemini 3 Flash.
-    
-    Uses the official Google GenAI SDK.
-    
-    Args:
-        audio_data: Raw audio bytes
-        mime_type: Audio MIME type (audio/webm, audio/wav, audio/mp3)
-        
-    Returns:
-        TranscriptionResult with transcription and extracted fields
+    Transcribe audio and extract structured info using Gemini Flash.
     """
     if not GEMINI_API_KEY:
         print("[Gemini STT] API key not configured")
@@ -67,9 +47,6 @@ async def transcribe_and_extract_with_gemini(
     
     if not audio_data:
         return TranscriptionResult(text="", success=False)
-    
-    # Encode audio to base64
-    audio_base64 = base64.b64encode(audio_data).decode('utf-8')
     
     # Build prompt for transcription + extraction
     prompt = """Listen to this audio and do TWO things:
@@ -93,25 +70,19 @@ Respond ONLY with this JSON format:
 }"""
 
     try:
-        client = get_client()
+        # Create model
+        model = genai.GenerativeModel(GEMINI_MODEL)
         
-        # Create the content with audio
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=[
-                {
-                    "parts": [
-                        {"text": prompt},
-                        {
-                            "inline_data": {
-                                "mime_type": mime_type,
-                                "data": audio_base64
-                            }
-                        }
-                    ]
-                }
-            ]
-        )
+        # Create audio part
+        audio_part = {
+            "inline_data": {
+                "mime_type": mime_type,
+                "data": base64.b64encode(audio_data).decode('utf-8')
+            }
+        }
+        
+        # Generate response
+        response = model.generate_content([prompt, audio_part])
         
         raw_text = response.text.strip()
         print(f"[Gemini STT] Raw response: {raw_text[:200]}")
@@ -177,32 +148,21 @@ async def transcribe_only_with_gemini(
     if not GEMINI_API_KEY or not audio_data:
         return None
     
-    audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-    
     prompt = """Transcribe this audio exactly as spoken. 
 The audio may be in English, Hindi, or mixed. 
 Output ONLY the transcription, nothing else."""
 
     try:
-        client = get_client()
+        model = genai.GenerativeModel(GEMINI_MODEL)
         
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=[
-                {
-                    "parts": [
-                        {"text": prompt},
-                        {
-                            "inline_data": {
-                                "mime_type": mime_type,
-                                "data": audio_base64
-                            }
-                        }
-                    ]
-                }
-            ]
-        )
+        audio_part = {
+            "inline_data": {
+                "mime_type": mime_type,
+                "data": base64.b64encode(audio_data).decode('utf-8')
+            }
+        }
         
+        response = model.generate_content([prompt, audio_part])
         return response.text.strip()
         
     except Exception as e:

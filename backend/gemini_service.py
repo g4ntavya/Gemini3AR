@@ -2,42 +2,26 @@
 Gemini Service for RemindAR
 ===========================
 
-Uses the official Google GenAI SDK with gemini-3-flash-preview model.
-
-Features:
-1. Conversation Memory Summarization
-2. Memory Normalization & Cleanup
-3. Multilingual Handling
-4. Dashboard Intelligence
+Uses google-generativeai SDK with Gemini Flash model.
 """
 
 import json
 import re
 import time
-import os
 from typing import Optional
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from google import genai
+import google.generativeai as genai
 
 from config import GEMINI_API_KEY, GEMINI_MODEL
 
-# Initialize the GenAI client
-_client: Optional[genai.Client] = None
+# Configure the API
+genai.configure(api_key=GEMINI_API_KEY)
 
 # Cache for avoiding repeat API calls
 _summary_cache: dict[str, tuple[str, float]] = {}
 CACHE_TTL_SECONDS = 300  # 5 minutes
-
-
-def get_client() -> genai.Client:
-    """Get the GenAI client instance."""
-    global _client
-    if _client is None:
-        os.environ["GOOGLE_API_KEY"] = GEMINI_API_KEY
-        _client = genai.Client()
-    return _client
 
 
 def _check_gemini_available() -> bool:
@@ -45,7 +29,7 @@ def _check_gemini_available() -> bool:
     return bool(GEMINI_API_KEY)
 
 
-def _call_gemini_sync(prompt: str, max_tokens: int = 150) -> Optional[str]:
+def _call_gemini_sync(prompt: str) -> Optional[str]:
     """
     Make a synchronous call to Gemini.
     """
@@ -54,13 +38,8 @@ def _call_gemini_sync(prompt: str, max_tokens: int = 150) -> Optional[str]:
         return None
     
     try:
-        client = get_client()
-        
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=prompt,
-        )
-        
+        model = genai.GenerativeModel(GEMINI_MODEL)
+        response = model.generate_content(prompt)
         return response.text.strip()
         
     except Exception as e:
@@ -72,7 +51,7 @@ async def _call_gemini(prompt: str, max_tokens: int = 150) -> Optional[str]:
     """
     Make a call to Gemini (async wrapper around sync call).
     """
-    return _call_gemini_sync(prompt, max_tokens)
+    return _call_gemini_sync(prompt)
 
 
 # ============================================================================
@@ -114,7 +93,7 @@ TRANSCRIPT:
 
 MEMORY SUMMARY (one line only):"""
 
-    result = await _call_gemini(prompt, max_tokens=50)
+    result = await _call_gemini(prompt)
     
     if result:
         # Clean up the result
@@ -175,7 +154,7 @@ RULES:
 OUTPUT FORMAT (JSON only):
 {{"name": "...", "relation": "...", "context": "..."}}"""
 
-    result = await _call_gemini(prompt, max_tokens=80)
+    result = await _call_gemini(prompt)
     
     if result:
         try:
@@ -230,7 +209,7 @@ RULES:
 
 ENGLISH SUMMARY:"""
 
-    result = await _call_gemini(prompt, max_tokens=50)
+    result = await _call_gemini(prompt)
     
     if result:
         result = result.strip().strip('"').strip("'")
@@ -289,7 +268,7 @@ Generate insights in this JSON format:
 
 OUTPUT (JSON only):"""
 
-    result = await _call_gemini(prompt, max_tokens=300)
+    result = await _call_gemini(prompt)
     
     insights = DashboardInsights(generated_at=datetime.now().isoformat())
     

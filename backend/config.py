@@ -14,7 +14,7 @@ load_dotenv(env_path)
 # Gemini API Key - loaded from .env file
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
-# Gemini model to use - Gemini 3 Flash (latest)
+# Gemini model to use - Gemini 3 Flash
 GEMINI_MODEL = "gemini-3-flash-preview"
 
 # Ollama configuration (kept as fallback)
