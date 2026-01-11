@@ -2,40 +2,35 @@
 Gemini Speech-to-Text + Extraction Service
 ==========================================
 
-Replaces Whisper + Phi with a single Gemini call that:
-1. Transcribes audio (any language: English, Hindi, Hinglish)
-2. Extracts structured fields (name, relation, context)
+Uses the official Google GenAI SDK with gemini-3-flash-preview model.
 
-This provides:
-- Better multilingual support (Hindi, Hinglish work seamlessly)
-- Single API call instead of Whisper → Phi pipeline
-- Consistent quality across languages
+Features:
+- Transcribes audio (any language: English, Hindi, Hinglish)
+- Extracts structured fields (name, relation, context) in one call
 """
 
 import base64
 import json
 import re
-import tempfile
 import os
 from typing import Optional
 from dataclasses import dataclass
 
-import httpx
+from google import genai
 
 from config import GEMINI_API_KEY, GEMINI_MODEL
 
-# Gemini API endpoint for audio
-GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
-
-# Reusable HTTP client
-_client: Optional[httpx.AsyncClient] = None
+# Initialize the GenAI client
+_client: Optional[genai.Client] = None
 
 
-async def get_client() -> httpx.AsyncClient:
-    """Get reusable async HTTP client."""
+def get_client() -> genai.Client:
+    """Get the GenAI client instance."""
     global _client
     if _client is None:
-        _client = httpx.AsyncClient(timeout=60.0)  # Longer timeout for audio
+        # Set API key via environment variable for the client
+        os.environ["GOOGLE_API_KEY"] = GEMINI_API_KEY
+        _client = genai.Client()
     return _client
 
 
@@ -55,14 +50,9 @@ async def transcribe_and_extract_with_gemini(
     mime_type: str = "audio/webm"
 ) -> TranscriptionResult:
     """
-    Transcribe audio and extract structured info using Gemini.
+    Transcribe audio and extract structured info using Gemini 3 Flash.
     
-    Replaces: Whisper (transcription) + Phi-3 (extraction)
-    
-    Benefits:
-    - Single API call instead of two
-    - Native Hindi/Hinglish support
-    - Better context understanding
+    Uses the official Google GenAI SDK.
     
     Args:
         audio_data: Raw audio bytes
@@ -103,13 +93,13 @@ Respond ONLY with this JSON format:
 }"""
 
     try:
-        client = await get_client()
+        client = get_client()
         
-        response = await client.post(
-            GEMINI_API_URL,
-            params={"key": GEMINI_API_KEY},
-            json={
-                "contents": [{
+        # Create the content with audio
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=[
+                {
                     "parts": [
                         {"text": prompt},
                         {
@@ -119,34 +109,11 @@ Respond ONLY with this JSON format:
                             }
                         }
                     ]
-                }],
-                "generationConfig": {
-                    "temperature": 0.1,
-                    "maxOutputTokens": 300,
                 }
-            },
-            headers={"Content-Type": "application/json"}
+            ]
         )
         
-        if response.status_code != 200:
-            print(f"[Gemini STT] API error: {response.status_code} - {response.text[:200]}")
-            return TranscriptionResult(text="", success=False)
-        
-        data = response.json()
-        
-        # Extract text from response
-        candidates = data.get("candidates", [])
-        if not candidates:
-            print("[Gemini STT] No candidates in response")
-            return TranscriptionResult(text="", success=False)
-        
-        content = candidates[0].get("content", {})
-        parts = content.get("parts", [])
-        if not parts:
-            print("[Gemini STT] No parts in response")
-            return TranscriptionResult(text="", success=False)
-        
-        raw_text = parts[0].get("text", "").strip()
+        raw_text = response.text.strip()
         print(f"[Gemini STT] Raw response: {raw_text[:200]}")
         
         # Parse JSON from response
@@ -206,12 +173,8 @@ async def transcribe_only_with_gemini(
 ) -> Optional[str]:
     """
     Simple transcription without extraction.
-    For cases where you just need the text.
     """
-    if not GEMINI_API_KEY:
-        return None
-    
-    if not audio_data:
+    if not GEMINI_API_KEY or not audio_data:
         return None
     
     audio_base64 = base64.b64encode(audio_data).decode('utf-8')
@@ -221,13 +184,12 @@ The audio may be in English, Hindi, or mixed.
 Output ONLY the transcription, nothing else."""
 
     try:
-        client = await get_client()
+        client = get_client()
         
-        response = await client.post(
-            GEMINI_API_URL,
-            params={"key": GEMINI_API_KEY},
-            json={
-                "contents": [{
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=[
+                {
                     "parts": [
                         {"text": prompt},
                         {
@@ -237,27 +199,11 @@ Output ONLY the transcription, nothing else."""
                             }
                         }
                     ]
-                }],
-                "generationConfig": {
-                    "temperature": 0.1,
-                    "maxOutputTokens": 200,
                 }
-            },
-            headers={"Content-Type": "application/json"}
+            ]
         )
         
-        if response.status_code != 200:
-            return None
-        
-        data = response.json()
-        candidates = data.get("candidates", [])
-        if candidates:
-            content = candidates[0].get("content", {})
-            parts = content.get("parts", [])
-            if parts:
-                return parts[0].get("text", "").strip()
-        
-        return None
+        return response.text.strip()
         
     except Exception as e:
         print(f"[Gemini STT] Error: {e}")

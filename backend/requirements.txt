@@ -17,10 +17,8 @@ onnxruntime==1.16.3
 # Database
 aiosqlite==0.19.0
 
-# Speech-to-text
-faster-whisper==1.0.0
-
-# Gemini Flash (reflection/summarization)
-google-generativeai==0.4.0
+# Gemini (using official Google GenAI SDK)
+google-genai
 python-dotenv==1.0.0
+
 

@@ -1,39 +1,42 @@
 """
-Flow:
------
-Realtime Path (untouched):
-  Camera → Face Detection → Whisper → Phi → UI Overlay
+Gemini Service for RemindAR
+===========================
 
-Reflection Path (Gemini):
-  Conversation Buffer → Gemini Flash → Memory Summary → DB → Dashboard
+Uses the official Google GenAI SDK with gemini-3-flash-preview model.
+
+Features:
+1. Conversation Memory Summarization
+2. Memory Normalization & Cleanup
+3. Multilingual Handling
+4. Dashboard Intelligence
 """
 
 import json
 import re
 import time
-import httpx
+import os
 from typing import Optional
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from google import genai
+
 from config import GEMINI_API_KEY, GEMINI_MODEL
 
-# Gemini API endpoint
-GEMINI_API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+# Initialize the GenAI client
+_client: Optional[genai.Client] = None
 
 # Cache for avoiding repeat API calls
 _summary_cache: dict[str, tuple[str, float]] = {}
 CACHE_TTL_SECONDS = 300  # 5 minutes
 
-# Reusable HTTP client
-_client: Optional[httpx.AsyncClient] = None
 
-
-async def get_client() -> httpx.AsyncClient:
-    """Get reusable async HTTP client."""
+def get_client() -> genai.Client:
+    """Get the GenAI client instance."""
     global _client
     if _client is None:
-        _client = httpx.AsyncClient(timeout=30.0)
+        os.environ["GOOGLE_API_KEY"] = GEMINI_API_KEY
+        _client = genai.Client()
     return _client
 
 
@@ -42,54 +45,34 @@ def _check_gemini_available() -> bool:
     return bool(GEMINI_API_KEY)
 
 
-async def _call_gemini(prompt: str, max_tokens: int = 150) -> Optional[str]:
+def _call_gemini_sync(prompt: str, max_tokens: int = 150) -> Optional[str]:
     """
-    Make a call to Gemini Flash API.
-    
-    Returns the generated text or None on failure.
-    Handles rate limits and errors gracefully.
+    Make a synchronous call to Gemini.
     """
     if not _check_gemini_available():
         print("[Gemini] API key not configured, skipping")
         return None
     
     try:
-        client = await get_client()
+        client = get_client()
         
-        response = await client.post(
-            GEMINI_API_URL,
-            params={"key": GEMINI_API_KEY},
-            json={
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {
-                    "temperature": 0.2,
-                    "maxOutputTokens": max_tokens,
-                    "topP": 0.8,
-                    "topK": 10
-                }
-            },
-            headers={"Content-Type": "application/json"}
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
         )
         
-        if response.status_code != 200:
-            print(f"[Gemini] API error: {response.status_code} - {response.text[:200]}")
-            return None
-        
-        data = response.json()
-        
-        # Extract text from response
-        candidates = data.get("candidates", [])
-        if candidates:
-            content = candidates[0].get("content", {})
-            parts = content.get("parts", [])
-            if parts:
-                return parts[0].get("text", "").strip()
-        
-        return None
+        return response.text.strip()
         
     except Exception as e:
         print(f"[Gemini] Error: {e}")
         return None
+
+
+async def _call_gemini(prompt: str, max_tokens: int = 150) -> Optional[str]:
+    """
+    Make a call to Gemini (async wrapper around sync call).
+    """
+    return _call_gemini_sync(prompt, max_tokens)
 
 
 # ============================================================================
@@ -164,28 +147,7 @@ async def normalize_memory_with_gemini(
     context: Optional[str]
 ) -> NormalizedMemory:
     """
-    Normalize and clean up memory fields after Phi-3 extraction.
-    
-    WHY GEMINI: Phi-3 extracts raw slots quickly but may output:
-    - Lowercase names ("aditya" instead of "Aditya")
-    - Inconsistent relations ("my friend" vs "Friend")
-    - Long, rambling context strings
-    
-    Gemini normalizes:
-    - Proper capitalization for names
-    - Standard relation labels (Friend, Doctor, Family, Neighbor, etc.)
-    - Context shortened to ≤8 words
-    - Ambiguity removed
-    
-    RUNS: After Phi extraction, BEFORE saving to database
-    
-    Args:
-        name: Raw name from Phi extraction
-        relation: Raw relation from Phi extraction
-        context: Raw context from Phi extraction
-        
-    Returns:
-        NormalizedMemory with cleaned fields
+    Normalize and clean up memory fields.
     """
     # If all fields are empty, return as-is
     if not any([name, relation, context]):
@@ -249,26 +211,6 @@ async def translate_and_summarize_with_gemini(
 ) -> Optional[str]:
     """
     Translate and summarize non-English or mixed-language transcripts.
-    
-    WHY GEMINI: Whisper transcribes in the original language but:
-    - Phi-3 is optimized for English extraction
-    - Local translation is slow and unreliable
-    - Mixed Hindi/English (Hinglish) is common in India
-    
-    Gemini handles:
-    - Pure Hindi transcripts
-    - Hindi + English mixed (Hinglish)
-    - Any other language
-    - Outputs clean English summary
-    
-    TRIGGERS: When Whisper detects non-English or mixed language
-    
-    Args:
-        transcript: Raw transcript (may be non-English or mixed)
-        source_language: Detected language code (optional)
-        
-    Returns:
-        Clean English memory summary or None on failure
     """
     if not transcript or not transcript.strip():
         return None
@@ -317,21 +259,6 @@ async def generate_dashboard_insights_with_gemini(
 ) -> DashboardInsights:
     """
     Generate intelligent insights for the dashboard view.
-    
-    WHY GEMINI: Dashboard requires high-level reasoning that Phi-3 can't do:
-    - Aggregating patterns across multiple memories
-    - Identifying common topics/themes
-    - Generating natural language summaries
-    - Creating caregiver-friendly explanations
-    
-    RUNS: Only on dashboard load, NEVER in live AR overlay
-    
-    Args:
-        memories: List of memory dicts from database
-        days: Number of days to analyze (default: 7)
-        
-    Returns:
-        DashboardInsights with generated insights
     """
     if not memories:
         return DashboardInsights(generated_at=datetime.now().isoformat())
@@ -390,9 +317,6 @@ OUTPUT (JSON only):"""
 def local_fallback_summary(transcript_buffer: list[str]) -> str:
     """
     Simple local fallback when Gemini API is unavailable.
-    
-    This is NOT a replacement for Gemini - it's a safety net.
-    Just returns the last few words as a basic summary.
     """
     if not transcript_buffer:
         return ""
