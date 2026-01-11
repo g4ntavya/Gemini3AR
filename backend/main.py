@@ -6,12 +6,15 @@ Handles:
 - WebSocket connections for real-time face data
 - Face recognition pipeline
 - Identity + memory context responses
+- Gemini Flash integration for reflection/summarization (NOT realtime)
 """
 
 import json
 import asyncio
-from typing import Dict, Set
+import time
+from typing import Dict, Set, List, Optional
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,6 +45,36 @@ from firebase_sync import (
     add_update_listener,
     notify_update
 )
+
+# Gemini Flash integration for reflection/summarization (NOT realtime)
+from gemini_service import (
+    generate_conversation_summary_with_gemini,
+    normalize_memory_with_gemini,
+    translate_and_summarize_with_gemini,
+    generate_dashboard_insights_with_gemini,
+    local_fallback_summary,
+    NormalizedMemory,
+    DashboardInsights
+)
+
+
+# ============================================================================
+# Conversation Buffer Tracking (for Gemini summarization)
+# ============================================================================
+
+@dataclass
+class ConversationSession:
+    """Tracks an active conversation for Gemini summarization."""
+    transcript_buffer: List[str] = field(default_factory=list)
+    last_speech_time: float = 0.0
+    person_name: Optional[str] = None
+    is_active: bool = False
+
+# Track conversation buffers per client/session
+conversation_sessions: Dict[str, ConversationSession] = {}
+
+# Silence threshold for triggering Gemini summary (seconds)
+SILENCE_THRESHOLD_SECONDS = 5.0
 
 
 # ============================================================================
@@ -338,25 +371,99 @@ from fastapi import File, UploadFile
 @app.post("/api/transcribe")
 async def api_transcribe(audio: UploadFile = File(...)):
     """
-    Transcribe uploaded audio file to text.
+    Transcribe uploaded audio file to text using Gemini.
+    
+    REPLACES: Whisper STT
+    
+    Benefits:
+    - Native Hindi/Hinglish support
+    - Better accuracy for mixed languages
+    - Cloud-based (no local model needed)
+    
     Accepts WAV, MP3, or WebM audio.
     """
-    from speech_to_text import get_stt
-    
-    stt = get_stt()
-    
-    if stt.model is None:
-        return {"error": "STT model not loaded", "text": ""}
+    from gemini_stt import transcribe_and_extract_with_gemini
     
     # Read audio data
     audio_bytes = await audio.read()
     
-    # Transcribe
-    text = stt.transcribe(audio_bytes)
+    # Determine MIME type
+    mime_type = audio.content_type or "audio/webm"
+    if audio.filename:
+        if audio.filename.endswith(".wav"):
+            mime_type = "audio/wav"
+        elif audio.filename.endswith(".mp3"):
+            mime_type = "audio/mp3"
+        elif audio.filename.endswith(".webm"):
+            mime_type = "audio/webm"
+    
+    print(f"[API] Transcribing audio: {len(audio_bytes)} bytes, type: {mime_type}")
+    
+    # Transcribe AND extract with Gemini (single call)
+    result = await transcribe_and_extract_with_gemini(audio_bytes, mime_type)
+    
+    if not result.success:
+        return {
+            "text": "",
+            "success": False,
+            "error": "Gemini transcription failed"
+        }
     
     return {
-        "text": text or "",
-        "success": text is not None
+        "text": result.text,
+        "success": True,
+        "language": result.language,
+        # Also return extracted fields for convenience
+        "name": result.name,
+        "relation": result.relation,
+        "context": result.context,
+        "source": "gemini"
+    }
+
+
+@app.post("/api/transcribe-and-extract")
+async def api_transcribe_and_extract(audio: UploadFile = File(...)):
+    """
+    Transcribe audio AND extract structured info in ONE Gemini call.
+    
+    REPLACES: Whisper (transcription) + Phi-3 (extraction)
+    
+    This is the new primary endpoint for voice input.
+    Handles English, Hindi, Hinglish seamlessly.
+    
+    Returns:
+    - text: Full transcription
+    - name: Extracted person name
+    - relation: Extracted relationship
+    - context: Extracted context/memory
+    - language: Detected language (en, hi, hinglish)
+    """
+    from gemini_stt import transcribe_and_extract_with_gemini
+    
+    audio_bytes = await audio.read()
+    
+    # Determine MIME type
+    mime_type = audio.content_type or "audio/webm"
+    if audio.filename:
+        if audio.filename.endswith(".wav"):
+            mime_type = "audio/wav"
+        elif audio.filename.endswith(".mp3"):
+            mime_type = "audio/mp3"
+        elif audio.filename.endswith(".webm"):
+            mime_type = "audio/webm"
+    
+    print(f"[API] Transcribe+Extract: {len(audio_bytes)} bytes, type: {mime_type}")
+    
+    result = await transcribe_and_extract_with_gemini(audio_bytes, mime_type)
+    
+    return {
+        "text": result.text,
+        "name": result.name,
+        "relation": result.relation,
+        "context": result.context,
+        "language": result.language,
+        "success": result.success,
+        "source": "gemini"
     }
 
 
@@ -368,19 +475,49 @@ class ExtractionRequest(BaseModel):
 @app.post("/api/extract")
 async def api_extract(request: ExtractionRequest):
     """
-    Extract structured info (name, relation, context) from a sentence.
-    Uses local Phi-3 via Ollama.
-    """
-    from llm_extraction import extract_info_async
+    Extract structured info (name, relation, context) from text.
     
-    result = await extract_info_async(request.text)
+    Now uses Gemini for better multilingual and context understanding.
+    Falls back to Phi-3 if Gemini unavailable.
+    """
+    from gemini_service import normalize_memory_with_gemini
+    
+    if not request.text or not request.text.strip():
+        return {
+            "name": None,
+            "relation": None,
+            "context": None,
+            "success": False
+        }
+    
+    # Use Gemini for extraction (better multilingual support)
+    result = await normalize_memory_with_gemini(
+        name=None,  # Extract from text
+        relation=None,
+        context=request.text  # Pass full text as context for extraction
+    )
+    
+    # If Gemini didn't extract well, fall back to Phi
+    if not result.was_normalized or not any([result.name, result.relation]):
+        from llm_extraction import extract_info_async
+        phi_result = await extract_info_async(request.text)
+        return {
+            "name": phi_result.name,
+            "relation": phi_result.relation,
+            "context": phi_result.context,
+            "success": any([phi_result.name, phi_result.relation, phi_result.context]),
+            "source": "phi"
+        }
     
     return {
         "name": result.name,
         "relation": result.relation,
         "context": result.context,
-        "success": any([result.name, result.relation, result.context])
+        "success": any([result.name, result.relation, result.context]),
+        "source": "gemini"
     }
+
+
 
 
 
@@ -532,8 +669,352 @@ async def remove_person(person_id: str):
 
 
 # ============================================================================
-# Development Server
+# GEMINI FLASH ENDPOINTS (Reflection/Summarization - NOT Realtime)
 # ============================================================================
+# 
+# These endpoints use Gemini Flash for:
+# 1. Conversation memory summarization
+# 2. Memory normalization & cleanup
+# 3. Multilingual handling
+# 4. Dashboard intelligence
+#
+# IMPORTANT: These are NEVER called per-frame or per-second.
+# They are triggered by specific events (silence, face leave, button press).
+# ============================================================================
+
+class ConversationSummaryRequest(BaseModel):
+    """Request for Gemini conversation summarization."""
+    transcript: List[str]  # List of transcription lines
+    person_name: Optional[str] = None
+
+class TranslateRequest(BaseModel):
+    """Request for multilingual translation/summarization."""
+    text: str
+    source_language: Optional[str] = None
+
+class DashboardInsightsRequest(BaseModel):
+    """Request for dashboard insights generation."""
+    days: int = 7
+    person_id: Optional[str] = None
+
+
+@app.post("/api/summarize-conversation")
+async def summarize_conversation(request: ConversationSummaryRequest):
+    """
+    Generate a clean English memory summary from conversation transcript.
+    
+    GEMINI USAGE: This is the primary integration point for Gemini Flash.
+    
+    TRIGGERS (call this endpoint when):
+    - Silence detected for ≥5-7 seconds
+    - Face leaves camera frame
+    - User presses "Save Memory" button
+    
+    WHY GEMINI:
+    - Understands full conversation context (not just single sentences like Phi)
+    - Handles mixed languages (Hindi + English)
+    - Generates natural, emotionally neutral summaries
+    - Removes filler words while preserving meaning
+    
+    NOT called per-frame or per-second - only once per conversation.
+    """
+    if not request.transcript:
+        return {"summary": "", "success": False, "error": "Empty transcript"}
+    
+    print(f"[Gemini] Summarizing conversation: {len(request.transcript)} lines")
+    
+    # Try Gemini Flash first
+    summary = await generate_conversation_summary_with_gemini(
+        request.transcript,
+        request.person_name
+    )
+    
+    # Fallback to local if Gemini fails
+    if not summary:
+        summary = local_fallback_summary(request.transcript)
+        return {
+            "summary": summary,
+            "success": True,
+            "source": "local_fallback",
+            "reason": "Gemini unavailable, used local fallback"
+        }
+    
+    return {
+        "summary": summary,
+        "success": True,
+        "source": "gemini_flash"
+    }
+
+
+@app.post("/api/extract-normalized")
+async def extract_and_normalize(request: ExtractionRequest, normalize: bool = True):
+    """
+    Extract structured info AND optionally normalize with Gemini.
+    
+    This is an enhanced version of /api/extract that adds Gemini normalization.
+    
+    FLOW:
+    1. Phi-3 extracts raw slots (fast, <2 seconds)
+    2. If normalize=True, Gemini cleans up the result:
+       - Capitalizes names properly
+       - Standardizes relation labels
+       - Shortens context to ≤8 words
+    
+    WHY GEMINI for normalization:
+    - Phi-3 outputs raw text that may be lowercase or inconsistent
+    - Gemini provides semantic understanding for cleanup
+    - Still fast because Phi does the heavy lifting first
+    """
+    from llm_extraction import extract_info_async
+    
+    # Step 1: Fast Phi-3 extraction (realtime-safe)
+    phi_result = await extract_info_async(request.text)
+    
+    if not normalize:
+        # Return raw Phi result
+        return {
+            "name": phi_result.name,
+            "relation": phi_result.relation,
+            "context": phi_result.context,
+            "success": any([phi_result.name, phi_result.relation, phi_result.context]),
+            "normalized": False
+        }
+    
+    # Step 2: Gemini normalization (reflection-safe)
+    print(f"[Gemini] Normalizing extraction: {phi_result.name}, {phi_result.relation}")
+    normalized = await normalize_memory_with_gemini(
+        phi_result.name,
+        phi_result.relation,
+        phi_result.context
+    )
+    
+    return {
+        "name": normalized.name,
+        "relation": normalized.relation,
+        "context": normalized.context,
+        "success": any([normalized.name, normalized.relation, normalized.context]),
+        "normalized": normalized.was_normalized,
+        "source": "gemini_flash" if normalized.was_normalized else "phi_only"
+    }
+
+
+@app.post("/api/translate-summarize")
+async def translate_and_summarize(request: TranslateRequest):
+    """
+    Translate and summarize non-English or mixed-language text.
+    
+    TRIGGER: When Whisper detects non-English or mixed language input.
+    
+    WHY GEMINI:
+    - Phi-3 is optimized for English extraction only
+    - Local translation is slow and unreliable
+    - Gemini handles Hindi, Hinglish (Hindi+English mix), and other languages
+    
+    FLOW:
+    Whisper (detects non-English) → This endpoint → Clean English summary
+    """
+    if not request.text or not request.text.strip():
+        return {"summary": "", "success": False, "error": "Empty text"}
+    
+    print(f"[Gemini] Translating: {request.text[:50]}...")
+    
+    summary = await translate_and_summarize_with_gemini(
+        request.text,
+        request.source_language
+    )
+    
+    if not summary:
+        return {
+            "summary": "",
+            "success": False,
+            "error": "Translation failed, Gemini unavailable"
+        }
+    
+    return {
+        "summary": summary,
+        "success": True,
+        "source": "gemini_flash",
+        "original_language": request.source_language
+    }
+
+
+@app.get("/api/dashboard/insights")
+async def get_dashboard_insights(days: int = 7, person_id: Optional[str] = None):
+    """
+    Generate intelligent insights for the dashboard view.
+    
+    ONLY for dashboard - NEVER in live AR overlay.
+    
+    WHY GEMINI:
+    - Dashboard requires high-level reasoning that Phi-3 can't do
+    - Aggregates patterns across multiple memories
+    - Identifies common topics/themes
+    - Generates natural language summaries
+    - Creates caregiver-friendly explanations
+    
+    RETURNS:
+    - Last interactions summary
+    - Common topics discussed
+    - Weekly/daily summaries
+    - Caregiver notes
+    """
+    # Get memories from database
+    all_people = get_all_people()
+    
+    # Filter by person_id if provided
+    if person_id:
+        all_people = [p for p in all_people if p.get("id") == person_id]
+    
+    if not all_people:
+        return {
+            "insights": {},
+            "success": False,
+            "error": "No memories found"
+        }
+    
+    print(f"[Gemini] Generating dashboard insights for {len(all_people)} people")
+    
+    insights = await generate_dashboard_insights_with_gemini(all_people, days)
+    
+    return {
+        "insights": {
+            "last_interactions": insights.last_interactions,
+            "common_topics": insights.common_topics,
+            "weekly_summary": insights.weekly_summary,
+            "caregiver_notes": insights.caregiver_notes,
+            "generated_at": insights.generated_at
+        },
+        "success": True,
+        "source": "gemini_flash",
+        "people_analyzed": len(all_people)
+    }
+
+
+@app.post("/api/conversation/add-line")
+async def add_conversation_line(session_id: str, text: str, person_name: Optional[str] = None):
+    """
+    Add a transcription line to the conversation buffer.
+    
+    This is used to track ongoing conversations for later summarization.
+    The buffer is used by /api/summarize-conversation when triggered.
+    
+    Call this after each Whisper transcription in the frontend.
+    """
+    if session_id not in conversation_sessions:
+        conversation_sessions[session_id] = ConversationSession()
+    
+    session = conversation_sessions[session_id]
+    session.transcript_buffer.append(text)
+    session.last_speech_time = time.time()
+    session.is_active = True
+    if person_name:
+        session.person_name = person_name
+    
+    return {
+        "status": "added",
+        "buffer_size": len(session.transcript_buffer),
+        "session_id": session_id
+    }
+
+
+@app.get("/api/conversation/get-buffer")
+async def get_conversation_buffer(session_id: str):
+    """
+    Get the current conversation buffer for a session.
+    """
+    if session_id not in conversation_sessions:
+        return {"transcript": [], "person_name": None}
+    
+    session = conversation_sessions[session_id]
+    return {
+        "transcript": session.transcript_buffer,
+        "person_name": session.person_name,
+        "last_speech_time": session.last_speech_time,
+        "is_active": session.is_active
+    }
+
+
+@app.post("/api/conversation/clear")
+async def clear_conversation_buffer(session_id: str):
+    """
+    Clear the conversation buffer for a session.
+    Call this after summarization is complete.
+    """
+    if session_id in conversation_sessions:
+        del conversation_sessions[session_id]
+    
+    return {"status": "cleared", "session_id": session_id}
+
+
+@app.post("/api/conversation/summarize-and-save")
+async def summarize_and_save_conversation(session_id: str, person_id: Optional[str] = None):
+    """
+    Summarize the conversation buffer and optionally save to a person's context.
+    
+    FLOW:
+    1. Get conversation buffer
+    2. Call Gemini to summarize
+    3. If person_id provided, update their context
+    4. Clear the buffer
+    
+    This is the main integration point for end-of-conversation handling.
+    """
+    if session_id not in conversation_sessions:
+        return {"success": False, "error": "Session not found"}
+    
+    session = conversation_sessions[session_id]
+    
+    if not session.transcript_buffer:
+        return {"success": False, "error": "Empty conversation buffer"}
+    
+    # Generate summary with Gemini
+    summary = await generate_conversation_summary_with_gemini(
+        session.transcript_buffer,
+        session.person_name
+    )
+    
+    if not summary:
+        summary = local_fallback_summary(session.transcript_buffer)
+    
+    # If person_id provided, update their context
+    if person_id:
+        person = get_person(person_id)
+        if person:
+            from database import update_person as db_update_person
+            
+            # Append summary to existing context
+            existing_context = person.get("context", "")
+            new_context = f"{existing_context}. {summary}" if existing_context else summary
+            
+            db_update_person(
+                person_id=person_id,
+                name=person.get("name", ""),
+                relation=person.get("relation", ""),
+                last_met="Just now",  # Update last_met
+                context=new_context[:200]  # Limit context length
+            )
+            
+            # Sync to Firebase
+            updated_person = get_person(person_id)
+            sync_person_to_firebase(updated_person)
+            
+            # Broadcast update
+            await broadcast_to_all({
+                "type": "person_updated",
+                "data": updated_person
+            })
+    
+    # Clear the buffer
+    del conversation_sessions[session_id]
+    
+    return {
+        "success": True,
+        "summary": summary,
+        "person_id": person_id,
+        "source": "gemini_flash"
+    }
+
+
 
 if __name__ == "__main__":
     import uvicorn

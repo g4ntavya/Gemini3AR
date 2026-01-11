@@ -3,7 +3,7 @@
  * Optimized for real-time updates
  */
 
-import { useState, useRef, useCallback, useReducer } from 'react';
+import { useRef, useCallback, useReducer } from 'react';
 
 interface ExtractedInfo {
     name: string | null;
@@ -104,48 +104,43 @@ export function useSpeechToText() {
             mediaRecorder.onstop = async () => {
                 dispatch({ type: 'STOP_RECORDING' });
                 dispatch({ type: 'SET_PROCESSING', value: true });
-                console.log('[STT] Processing...');
+                console.log('[STT] Processing with Gemini...');
 
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
                 const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
 
                 try {
-                    // Transcribe
+                    // Use new Gemini endpoint that does transcription + extraction in ONE call
+                    // This replaces the old Whisper → Phi pipeline
+                    // Benefits: Native Hindi/Hinglish support, single API call
                     const formData = new FormData();
                     formData.append('audio', audioBlob, 'recording.webm');
 
-                    const transcribeRes = await fetch('http://localhost:8000/api/transcribe', {
+                    console.log('[STT] Sending to Gemini (transcribe + extract)...');
+                    const response = await fetch('http://localhost:8000/api/transcribe-and-extract', {
                         method: 'POST',
                         body: formData,
                     });
 
-                    const transcribeData = await transcribeRes.json();
+                    const data = await response.json();
+                    console.log('[STT] Gemini response:', data);
 
-                    if (!transcribeData.success || !transcribeData.text) {
+                    if (!data.success) {
                         dispatch({ type: 'SET_ERROR', value: 'Transcription failed' });
                         resolve(null);
                         return;
                     }
 
-                    const text = transcribeData.text.trim();
+                    // Set transcript
+                    const text = data.text?.trim() || '';
                     dispatch({ type: 'SET_TRANSCRIPT', value: text });
-                    console.log('[STT] Text:', text);
+                    console.log(`[STT] Transcribed (${data.language}):`, text);
 
-                    // Extract
-                    console.log('[STT] Extracting...');
-                    const extractRes = await fetch('http://localhost:8000/api/extract', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text }),
-                    });
-
-                    const extractData = await extractRes.json();
-                    console.log('[STT] Raw extract:', extractData);
-
+                    // Extract fields - already extracted by Gemini in the same call!
                     const info: ExtractedInfo = {
-                        name: extractData.name || null,
-                        relation: extractData.relation || null,
-                        context: extractData.context || null,
+                        name: data.name || null,
+                        relation: data.relation || null,
+                        context: data.context || null,
                     };
 
                     console.log('[STT] Extracted:', info);

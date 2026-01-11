@@ -69,3 +69,11 @@ logs/
 firebase-credentials.json
 *-firebase-*.json
 *.serviceAccountKey.json
+
+# API Keys and Secrets
+.env
+backend/.env
+*.env
+secrets.py
+config.local.py
+
