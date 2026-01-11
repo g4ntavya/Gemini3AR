@@ -11,7 +11,8 @@ RemindAR uses your webcam to detect faces, recognize identities, and display con
 **How it works:**
 - Face detection runs in the browser using MediaPipe
 - Face recognition uses InsightFace embeddings on the backend
-- Voice input with Whisper + Phi-3 for natural registration
+- **Gemini 3 Flash** for voice input transcription and field extraction
+- Native **Hindi/Hinglish** support for multilingual users
 - Data syncs between local SQLite and Firebase Firestore
 
 ---
@@ -22,18 +23,10 @@ RemindAR uses your webcam to detect faces, recognize identities, and display con
 
 - Python 3.9+
 - Node.js 18+
-- Ollama (for local LLM)
 - A webcam
+- Gemini API key (get from [Google AI Studio](https://aistudio.google.com/app/apikey))
 
-### 1. Install Ollama
-
-Download from https://ollama.com/download and pull the Phi-3 model:
-
-```bash
-ollama pull phi3
-```
-
-### 2. Backend Setup
+### 1. Backend Setup
 
 ```bash
 cd backend
@@ -45,13 +38,14 @@ source .venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
+# Create .env file with your Gemini API key
+echo "GEMINI_API_KEY=your-api-key-here" > .env
+
 # Start the server
 python main.py
 ```
 
-On first run, InsightFace (~300MB) and Whisper (~150MB) models download automatically.
-
-### 3. Frontend Setup
+### 2. Frontend Setup
 
 ```bash
 cd frontend
@@ -72,9 +66,10 @@ MediaPipe runs in-browser for fast detection.
 **Face Recognition**  
 InsightFace embeddings matched using cosine similarity.
 
-**Voice Registration**  
+**Voice Registration (Powered by Gemini 3 Flash)**  
 Speak naturally: "That's Aditya, my friend, we met for coffee"  
-Whisper transcribes, Phi-3 extracts structured data, form auto-fills.
+Gemini transcribes + extracts structured data in ONE call.  
+Supports English, Hindi, and Hinglish! 🇮🇳
 
 **Hybrid Storage**  
 Firestore for cloud sync, SQLite for local reads, in-memory cache for speed.
@@ -85,7 +80,7 @@ Firestore for cloud sync, SQLite for local reads, in-memory cache for speed.
 
 1. Click "Add this person" on an unknown face
 2. Click "Speak" and say something like: "That's Sarah, my doctor, she prescribed medication"
-3. Form auto-fills with extracted info
+3. Form auto-fills with extracted info (name, relation, context)
 4. Click Save
 
 ---
@@ -100,9 +95,21 @@ Frontend (React + TypeScript)
 
 Backend (FastAPI + Python)
 ├── InsightFace recognition
-├── Whisper transcription
-├── Phi-3 extraction (via Ollama)
+├── Gemini 3 Flash (transcription + extraction)
 └── SQLite + Firebase storage
+```
+
+### Gemini Integration
+
+```
+User speaks → Gemini 3 Flash → { transcription, name, relation, context }
+                (single API call)
+                
+Benefits:
+✅ Hindi/Hinglish works seamlessly
+✅ Single API call (fast)
+✅ Better context understanding
+✅ No local model downloads
 ```
 
 ---
@@ -114,8 +121,9 @@ RemindAR/
 ├── backend/
 │   ├── main.py              # FastAPI server
 │   ├── face_recognition.py  # InsightFace
-│   ├── speech_to_text.py    # Whisper
-│   ├── llm_extraction.py    # Phi-3 via Ollama
+│   ├── gemini_stt.py        # Gemini transcription + extraction
+│   ├── gemini_service.py    # Gemini summarization/normalization
+│   ├── config.py            # API key configuration
 │   ├── database.py          # SQLite
 │   └── firebase_sync.py     # Firestore
 │
@@ -140,16 +148,19 @@ RemindAR/
 VITE_WS_URL=ws://localhost:8000/ws
 ```
 
-**Firebase**: Place `firebase-credentials.json` in backend directory. Falls back to SQLite-only if not present.
+**Gemini API**: Add your key in `backend/.env`:
+```env
+GEMINI_API_KEY=your-key-here
+```
 
-**Ollama**: Must be running for voice extraction to work.
+**Firebase**: Place `firebase-credentials.json` in backend directory. Falls back to SQLite-only if not present.
 
 ---
 
 ## Troubleshooting
 
-**Voice extraction returns null**  
-Make sure Ollama is running: `ollama serve`
+**Voice extraction not working**  
+Check that your Gemini API key is set in `backend/.env`
 
 **Camera not working**  
 Check browser permissions. Try Chrome.
@@ -164,8 +175,7 @@ Register faces first. Good lighting helps.
 - FastAPI
 - MediaPipe
 - InsightFace
-- Whisper (faster-whisper)
-- Phi-3 (via Ollama)
+- **Gemini 3 Flash** (transcription + extraction)
 - Firebase Firestore
 - React / TypeScript / Vite
 
