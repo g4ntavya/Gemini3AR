@@ -4,6 +4,16 @@
  */
 
 /* ============================================
+   Minecraft Font
+   ============================================ */
+@font-face {
+  font-family: 'Minecraft';
+  src: url('/fonts/MinecraftRegular-Bmg3.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* ============================================
    Base
    ============================================ */
 *,
@@ -38,6 +48,37 @@ body,
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================
+   Minecraft-Style Name Tag
+   ============================================ */
+.minecraft-nametag {
+  position: absolute;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.1s ease-out, top 0.1s ease-out;
+}
+
+.nametag-text {
+  font-family: 'Minecraft', 'Courier New', monospace;
+  font-size: 28px;
+  font-weight: normal;
+  color: #ffffff;
+  text-shadow:
+    3px 3px 0 #3f3f3f,
+    -2px -2px 0 #3f3f3f,
+    2px -2px 0 #3f3f3f,
+    -2px 2px 0 #3f3f3f;
+  padding: 6px 14px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  white-space: nowrap;
+  letter-spacing: 1px;
 }
 
 /* ============================================

@@ -1,5 +1,6 @@
 /**
  * AR Overlay - Labels for detected faces with expandable cards
+ * Minecraft-style floating name tag above registered users
  * Edit (pencil) and Delete (trash) icon buttons
  */
 
@@ -70,84 +71,112 @@ export function AROverlay({
                 const result = results.get(face.id);
                 const isKnown = result?.is_known ?? false;
                 const person = result?.person;
-                const name = result?.display_lines?.[0] || 'Scanning...';
                 const relation = result?.display_lines?.[1] || '';
                 const isExpanded = expandedCards.has(face.id);
 
-                // Position at right edge of face (mirrored)
-                const x = Math.min(
+                // Position for the info card (right edge of face)
+                const cardX = Math.min(
                     Math.max(20, (1 - face.bbox.x) * containerWidth + 20),
                     containerWidth - 280
                 );
-                const y = Math.min(
+                const cardY = Math.min(
                     Math.max(60, (face.bbox.y + face.bbox.height / 2) * containerHeight),
                     containerHeight - 150
                 );
 
+                // Position for the Minecraft name tag (centered, ABOVE the face bbox)
+                // Place it just outside the top edge of the bounding box
+                const nameTagX = (1 - (face.bbox.x + face.bbox.width / 2)) * containerWidth;
+                // bbox.y is the TOP of the face box, so we go above it
+                const bboxTopY = face.bbox.y * containerHeight;
+                const nameTagY = bboxTopY - 220; // 50px above the top of the face box
+
                 return (
-                    <div
-                        key={face.id}
-                        className={`face-label ${isExpanded ? 'expanded' : ''}`}
-                        style={{ left: x, top: y }}
-                    >
-                        <div className="label-content">
-                            <div className="label-header">
-                                <div className="label-info">
-                                    <span className="label-name">{name}</span>
-                                    {relation && <span className="label-relation">{relation}</span>}
+                    <div key={face.id}>
+                        {/* Minecraft-style floating name tag - ONLY for registered users */}
+                        {isKnown && person?.name && (
+                            <div
+                                className="minecraft-nametag"
+                                style={{
+                                    left: nameTagX,
+                                    top: Math.max(30, nameTagY),
+                                }}
+                            >
+                                <span className="nametag-text">{person.name}</span>
+                            </div>
+                        )}
+
+                        {/* Info card */}
+                        <div
+                            className={`face-label ${isExpanded ? 'expanded' : ''}`}
+                            style={{ left: cardX, top: cardY }}
+                        >
+                            <div className="label-content">
+                                <div className="label-header">
+                                    <div className="label-info">
+                                        {/* Show "Scanning..." for unknown, relation for known */}
+                                        {isKnown ? (
+                                            <>
+                                                {/* No name here - it's shown in the floating tag */}
+                                                {relation && <span className="label-relation">{relation}</span>}
+                                            </>
+                                        ) : (
+                                            <span className="label-name">Scanning...</span>
+                                        )}
+                                    </div>
+
+                                    {/* Expand arrow for known persons */}
+                                    {isKnown && (
+                                        <button
+                                            className={`expand-btn ${isExpanded ? 'rotated' : ''}`}
+                                            onClick={() => toggleExpand(face.id)}
+                                        >
+                                            ›
+                                        </button>
+                                    )}
                                 </div>
 
-                                {/* Expand arrow for known persons */}
+                                {/* Context - always visible for known persons */}
+                                {isKnown && person?.context && (
+                                    <p className="label-context">{person.context}</p>
+                                )}
+
+                                {/* Date - always visible */}
+                                {isKnown && person?.last_met && (
+                                    <span className="label-date">{person.last_met}</span>
+                                )}
+
+                                {/* Action buttons - only when expanded */}
                                 {isKnown && (
-                                    <button
-                                        className={`expand-btn ${isExpanded ? 'rotated' : ''}`}
-                                        onClick={() => toggleExpand(face.id)}
-                                    >
-                                        ›
-                                    </button>
+                                    <div className={`action-buttons ${isExpanded ? 'show' : ''}`}>
+                                        <button
+                                            className="action-btn edit-btn"
+                                            onClick={() => person?.id && onModifyPerson?.(person.id)}
+                                            title="Edit"
+                                        >
+                                            <PencilIcon />
+                                        </button>
+                                        <button
+                                            className="action-btn delete-btn"
+                                            onClick={() => person?.id && onDeletePerson?.(person.id)}
+                                            title="Delete"
+                                        >
+                                            <TrashIcon />
+                                        </button>
+                                    </div>
                                 )}
                             </div>
 
-                            {/* Context - always visible for known persons */}
-                            {isKnown && person?.context && (
-                                <p className="label-context">{person.context}</p>
-                            )}
-
-                            {/* Date - always visible */}
-                            {isKnown && person?.last_met && (
-                                <span className="label-date">{person.last_met}</span>
-                            )}
-
-                            {/* Action buttons - only when expanded */}
-                            {isKnown && (
-                                <div className={`action-buttons ${isExpanded ? 'show' : ''}`}>
-                                    <button
-                                        className="action-btn edit-btn"
-                                        onClick={() => person?.id && onModifyPerson?.(person.id)}
-                                        title="Edit"
-                                    >
-                                        <PencilIcon />
-                                    </button>
-                                    <button
-                                        className="action-btn delete-btn"
-                                        onClick={() => person?.id && onDeletePerson?.(person.id)}
-                                        title="Delete"
-                                    >
-                                        <TrashIcon />
-                                    </button>
-                                </div>
+                            {/* Add button for unknown */}
+                            {!isKnown && onAddPerson && (
+                                <button
+                                    className="add-person-btn"
+                                    onClick={() => onAddPerson(face.id)}
+                                >
+                                    Add this person
+                                </button>
                             )}
                         </div>
-
-                        {/* Add button for unknown */}
-                        {!isKnown && onAddPerson && (
-                            <button
-                                className="add-person-btn"
-                                onClick={() => onAddPerson(face.id)}
-                            >
-                                Add this person
-                            </button>
-                        )}
                     </div>
                 );
             })}

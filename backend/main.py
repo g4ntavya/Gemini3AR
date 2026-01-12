@@ -92,22 +92,34 @@ async def lifespan(app: FastAPI):
     # Initialize database
     init_database()
     
-    # Initialize Firebase
+    # Initialize Firebase (non-blocking)
     print("[Server] Initializing Firebase...")
     firebase_ok = init_firebase()
     if firebase_ok:
         add_update_listener(broadcast_update)
         
-        # Sync Firestore → SQLite
+        # Sync Firestore → SQLite with timeout
         print("[Server] Syncing Firestore → SQLite...")
-        from firebase_sync import get_all_people_from_firebase
-        from database import sync_from_firestore
-        
-        firestore_people = get_all_people_from_firebase()
-        if firestore_people:
-            sync_from_firestore(firestore_people)
-        else:
-            print("[Server] No data in Firestore, checking SQLite...")
+        try:
+            import asyncio
+            from firebase_sync import get_all_people_from_firebase
+            from database import sync_from_firestore
+            
+            # Run sync in thread with 10 second timeout
+            loop = asyncio.get_event_loop()
+            try:
+                firestore_people = await asyncio.wait_for(
+                    loop.run_in_executor(None, get_all_people_from_firebase),
+                    timeout=10.0
+                )
+                if firestore_people:
+                    sync_from_firestore(firestore_people)
+                else:
+                    print("[Server] No data in Firestore, using SQLite only...")
+            except asyncio.TimeoutError:
+                print("[Server] Firestore sync timed out, using SQLite only...")
+        except Exception as e:
+            print(f"[Server] Firestore sync failed: {e}, using SQLite only...")
     
     # Check if we have data
     people = get_all_people()
