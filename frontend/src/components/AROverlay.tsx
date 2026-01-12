@@ -89,7 +89,7 @@ export function AROverlay({
                 const nameTagX = (1 - (face.bbox.x + face.bbox.width / 2)) * containerWidth;
                 // bbox.y is the TOP of the face box, so we go above it
                 const bboxTopY = face.bbox.y * containerHeight;
-                const nameTagY = bboxTopY - 220; // 50px above the top of the face box
+                const nameTagY = bboxTopY - 220; // 220px above the top of the face box
 
                 return (
                     <div key={face.id}>
