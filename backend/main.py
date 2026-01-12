@@ -92,34 +92,23 @@ async def lifespan(app: FastAPI):
     # Initialize database
     init_database()
     
-    # Initialize Firebase (non-blocking)
+    # Initialize Firebase
     print("[Server] Initializing Firebase...")
     firebase_ok = init_firebase()
     if firebase_ok:
         add_update_listener(broadcast_update)
         
-        # Sync Firestore → SQLite with timeout
+        # Sync Firestore → SQLite (synchronous, blocks until complete)
         print("[Server] Syncing Firestore → SQLite...")
-        try:
-            import asyncio
-            from firebase_sync import get_all_people_from_firebase
-            from database import sync_from_firestore
-            
-            # Run sync in thread with 10 second timeout
-            loop = asyncio.get_event_loop()
-            try:
-                firestore_people = await asyncio.wait_for(
-                    loop.run_in_executor(None, get_all_people_from_firebase),
-                    timeout=10.0
-                )
-                if firestore_people:
-                    sync_from_firestore(firestore_people)
-                else:
-                    print("[Server] No data in Firestore, using SQLite only...")
-            except asyncio.TimeoutError:
-                print("[Server] Firestore sync timed out, using SQLite only...")
-        except Exception as e:
-            print(f"[Server] Firestore sync failed: {e}, using SQLite only...")
+        from firebase_sync import get_all_people_from_firebase
+        from database import sync_from_firestore
+        
+        firestore_people = get_all_people_from_firebase()
+        if firestore_people:
+            sync_from_firestore(firestore_people)
+            print(f"[Server] Synced {len(firestore_people)} people from Firestore")
+        else:
+            print("[Server] No data in Firestore, using SQLite only...")
     
     # Check if we have data
     people = get_all_people()
@@ -313,8 +302,14 @@ async def websocket_endpoint(websocket: WebSocket):
                 if not image_base64:
                     continue
                 
+                print(f"[WS] Processing face: {track_id[:20]}...")
+                
                 # Run recognition
                 person, confidence, embedding = recognizer.recognize(image_base64)
+                
+                # Log result
+                name = person.get("name", "Unknown") if person else "Unknown"
+                print(f"[WS] Recognized: {name} ({confidence:.2f})")
                 
                 # Build and send result
                 result = build_recognition_result(track_id, person, confidence)
@@ -323,11 +318,14 @@ async def websocket_endpoint(websocket: WebSocket):
                     "type": "recognition_result",
                     "data": result
                 })
+                print(f"[WS] Sent result for {track_id[:20]}")
                 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
     except Exception as e:
         print(f"[WS] Error: {e}")
+        import traceback
+        traceback.print_exc()
         manager.disconnect(websocket)
 
 
@@ -571,8 +569,14 @@ async def create_person(person: PersonCreate):
     # Get the created person
     created_person = get_person(person_id)
     
-    # Sync to Firebase and broadcast to all clients
+    # Sync to Firebase
     sync_person_to_firebase(created_person)
+    
+    # Broadcast to all clients for real-time update
+    await broadcast_to_all({
+        "type": "person_registered",
+        "data": created_person
+    })
     
     print(f"[API] Created person: {person.name} ({person_id})")
     return created_person

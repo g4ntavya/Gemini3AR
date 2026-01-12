@@ -85,9 +85,10 @@ export function useWebSocket(): UseWebSocketReturn {
                         });
                     }
 
-                    // Person registered or updated - clear results to force re-recognition
+                    // Person registered - clear results and wait briefly for cache update
                     if (message.type === 'person_registered' && message.data) {
                         console.log('[WS] Person registered:', message.data.name);
+                        // Clear all results to force fresh recognition with new embedding
                         setResults(new Map());
                     }
 

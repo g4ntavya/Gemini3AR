@@ -69,6 +69,7 @@ export function AROverlay({
             {/* Face labels */}
             {visibleFaces.map((face) => {
                 const result = results.get(face.id);
+                const hasResult = result !== undefined;
                 const isKnown = result?.is_known ?? false;
                 const person = result?.person;
                 const relation = result?.display_lines?.[1] || '';
@@ -84,12 +85,17 @@ export function AROverlay({
                     containerHeight - 150
                 );
 
-                // Position for the Minecraft name tag (centered, ABOVE the face bbox)
-                // Place it just outside the top edge of the bounding box
+                // Position for the Minecraft name tag (centered above head)
+                // face.bbox.x is the LEFT edge, so center is x + width/2
+                // We need to account for mirrored video (1 - x)
                 const nameTagX = (1 - (face.bbox.x + face.bbox.width / 2)) * containerWidth;
-                // bbox.y is the TOP of the face box, so we go above it
-                const bboxTopY = face.bbox.y * containerHeight;
-                const nameTagY = bboxTopY - 220; // 220px above the top of the face box
+                const nameTagY = face.bbox.y * containerHeight - 220; // Higher above the head
+
+                // Determine what text to show
+                let displayText = 'Scanning...';
+                if (hasResult) {
+                    displayText = isKnown ? '' : 'Not registered';
+                }
 
                 return (
                     <div key={face.id}>
@@ -114,14 +120,14 @@ export function AROverlay({
                             <div className="label-content">
                                 <div className="label-header">
                                     <div className="label-info">
-                                        {/* Show "Scanning..." for unknown, relation for known */}
+                                        {/* Show status for unknown, relation for known */}
                                         {isKnown ? (
                                             <>
                                                 {/* No name here - it's shown in the floating tag */}
                                                 {relation && <span className="label-relation">{relation}</span>}
                                             </>
                                         ) : (
-                                            <span className="label-name">Scanning...</span>
+                                            <span className="label-name">{displayText}</span>
                                         )}
                                     </div>
 
