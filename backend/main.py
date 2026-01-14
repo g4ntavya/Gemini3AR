@@ -325,6 +325,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+    except RuntimeError as e:
+        # Handle "WebSocket is not connected" - happens when client disconnects mid-operation
+        if "not connected" in str(e).lower():
+            pass  # Normal disconnect, no need to log
+        else:
+            print(f"[WS] Runtime error: {e}")
+        manager.disconnect(websocket)
     except Exception as e:
         print(f"[WS] Error: {e}")
         import traceback

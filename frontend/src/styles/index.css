@@ -1098,21 +1098,21 @@ body,
 }
 
 /* ============================================
-   Menu Button (Hamburger)
+   Menu Button (Sidebar Toggle)
    ============================================ */
 .menu-button {
   position: fixed;
-  top: 20px;
+  top: 80px;
+  /* Below the status indicator */
   left: 20px;
   z-index: 100;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: #fff;
-  font-size: 20px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1120,9 +1120,15 @@ body,
   transition: all 0.2s ease;
 }
 
+.menu-button svg {
+  width: 22px;
+  height: 22px;
+}
+
 .menu-button:hover {
   background: rgba(255, 255, 255, 0.15);
   transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 /* ============================================
@@ -1301,29 +1307,34 @@ body,
 /* ============================================
    Ask Gemini Button
    ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;500&display=swap');
+
 .ask-gemini-btn {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 100;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 24px;
-  border-radius: 50px;
-  background: linear-gradient(135deg, #4285f4 0%, #9b5de5 50%, #00bbf9 100%);
+  padding: 12px 24px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.95);
   border: none;
-  color: #fff;
-  font-size: 15px;
-  font-weight: 600;
+  color: #1a1a1a;
+  font-family: 'Product Sans', 'Google Sans', -apple-system, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
   cursor: pointer;
-  box-shadow: 0 4px 24px rgba(66, 133, 244, 0.4);
-  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
 }
 
 .ask-gemini-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(66, 133, 244, 0.5);
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 
 .ask-gemini-btn:disabled {
@@ -1332,44 +1343,37 @@ body,
 }
 
 .ask-gemini-btn.recording {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  animation: pulse 1s infinite;
-  box-shadow: 0 4px 24px rgba(239, 68, 68, 0.5);
+  background: #ea4335;
+  color: #fff;
+  animation: pulse 1.5s infinite;
+  box-shadow: 0 4px 24px rgba(234, 67, 53, 0.4);
 }
 
 .ask-gemini-btn.processing {
-  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  background: rgba(255, 255, 255, 0.9);
+  color: #666;
 }
 
 @keyframes pulse {
 
   0%,
   100% {
-    transform: scale(1);
+    transform: translateX(-50%) scale(1);
   }
 
   50% {
-    transform: scale(1.05);
+    transform: translateX(-50%) scale(1.03);
   }
 }
 
-.ask-gemini-btn .spinner {
-  animation: spin 1s linear infinite;
+.ask-gemini-btn .gemini-star {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.ask-gemini-btn .gemini-icon,
-.ask-gemini-btn .recording-icon {
-  font-size: 18px;
+.ask-gemini-btn .btn-label {
+  font-family: 'Product Sans', 'Google Sans', -apple-system, sans-serif;
 }
 
 /* ============================================
