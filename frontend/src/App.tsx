@@ -9,6 +9,9 @@ import { Camera } from './components/Camera';
 import { AROverlay } from './components/AROverlay';
 import { StatusIndicator } from './components/StatusIndicator';
 import { RegistrationModal, RegistrationData } from './components/RegistrationModal';
+import { DashboardSidebar } from './components/DashboardSidebar';
+import { AskGeminiButton, GeminiResponse } from './components/AskGeminiButton';
+import { GeminiResponseOverlay } from './components/GeminiResponseOverlay';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useFaceDetection } from './hooks/useFaceDetection';
 import { cropFaceFromVideo } from './utils/faceUtils';
@@ -29,6 +32,12 @@ function App() {
     const [modalTrackId, setModalTrackId] = useState('');
     const [modalFaceImage, setModalFaceImage] = useState('');
     const [editingPerson, setEditingPerson] = useState<Person | null>(null);
+
+    // Dashboard sidebar state
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    // Gemini response state
+    const [geminiResponse, setGeminiResponse] = useState<GeminiResponse | null>(null);
 
     // Refs
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -339,6 +348,30 @@ function App() {
             <button className="back-button" onClick={() => setIsDemoActive(false)}>
                 ← Back
             </button>
+
+            {/* Dashboard toggle button */}
+            <button
+                className="menu-button"
+                onClick={() => setSidebarOpen(true)}
+                title="People Dashboard"
+            >
+                ☰
+            </button>
+
+            {/* Ask Gemini button */}
+            <AskGeminiButton onResponse={setGeminiResponse} />
+
+            {/* Dashboard Sidebar */}
+            <DashboardSidebar
+                isOpen={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
+            />
+
+            {/* Gemini Response Overlay */}
+            <GeminiResponseOverlay
+                response={geminiResponse}
+                onClose={() => setGeminiResponse(null)}
+            />
 
             <RegistrationModal
                 isOpen={showModal}

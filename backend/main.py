@@ -98,17 +98,20 @@ async def lifespan(app: FastAPI):
     if firebase_ok:
         add_update_listener(broadcast_update)
         
-        # Sync Firestore → SQLite (synchronous, blocks until complete)
-        print("[Server] Syncing Firestore → SQLite...")
+        # Sync Firestore → SQLite (with timeout to prevent hanging)
+        print("[Server] Syncing Firestore → SQLite (timeout: 10s)...")
         from firebase_sync import get_all_people_from_firebase
         from database import sync_from_firestore
         
-        firestore_people = get_all_people_from_firebase()
-        if firestore_people:
-            sync_from_firestore(firestore_people)
-            print(f"[Server] Synced {len(firestore_people)} people from Firestore")
-        else:
-            print("[Server] No data in Firestore, using SQLite only...")
+        try:
+            firestore_people = get_all_people_from_firebase(timeout_seconds=10.0)
+            if firestore_people:
+                sync_from_firestore(firestore_people)
+                print(f"[Server] Synced {len(firestore_people)} people from Firestore")
+            else:
+                print("[Server] No data in Firestore or sync timed out, using SQLite only...")
+        except Exception as e:
+            print(f"[Server] Firestore sync failed: {e}, continuing with SQLite only...")
     
     # Check if we have data
     people = get_all_people()
@@ -475,6 +478,24 @@ async def api_transcribe_and_extract(audio: UploadFile = File(...)):
         "success": result.success,
         "source": "gemini"
     }
+
+
+@app.post("/api/ask-gemini")
+async def api_ask_gemini(audio: UploadFile = File(...)):
+    """
+    Ask Gemini about people context.
+    
+    Takes audio query like "Who did I talk to about coffee?"
+    Returns natural language response with matched people.
+    """
+    from ask_gemini import process_gemini_query
+    
+    audio_bytes = await audio.read()
+    print(f"[API] Ask Gemini: {len(audio_bytes)} bytes")
+    
+    result = await process_gemini_query(audio_bytes)
+    
+    return result
 
 
 from pydantic import BaseModel

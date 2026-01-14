@@ -3,6 +3,11 @@ Firebase sync module for RemindAR.
 Handles real-time sync with Firestore including embeddings.
 """
 
+import os
+# Fix gRPC DNS resolution issue - use native resolver instead of c-ares
+# This MUST be set before importing any gRPC-dependent modules
+os.environ.setdefault("GRPC_DNS_RESOLVER", "native")
+
 import firebase_admin
 from firebase_admin import credentials, firestore
 from pathlib import Path
@@ -148,31 +153,77 @@ def delete_person_from_firebase(person_id: str):
         print(f"[Firebase] Delete error: {e}")
 
 
-def get_all_people_from_firebase() -> List[Dict[str, Any]]:
+def get_all_people_from_firebase(timeout_seconds: float = 10.0) -> List[Dict[str, Any]]:
     """
     Fetch all people with embeddings from Firestore.
     Returns list of (person_dict, embedding) tuples.
+    
+    Args:
+        timeout_seconds: Maximum time to wait for Firestore response.
     """
     if not _initialized or not _db:
         return []
     
     try:
-        docs = _db.collection("people").where("has_embedding", "==", True).stream()
-        people = []
+        import signal
+        import threading
         
-        for doc in docs:
-            data = doc.to_dict()
-            data["id"] = doc.id
-            
-            # Convert embedding list back to numpy array
-            if "embedding" in data and data["embedding"]:
-                data["embedding_array"] = np.array(data["embedding"], dtype=np.float32)
-            else:
-                data["embedding_array"] = None
+        result = []
+        error = [None]  # Use list to allow modification in nested function
+        completed = threading.Event()
+        
+        def fetch_docs():
+            try:
+                collection_ref = _db.collection("people")
+                # Get all docs - we'll filter in Python
+                all_docs = list(collection_ref.stream())
                 
-            people.append(data)
+                if not all_docs:
+                    print("[Firebase] Collection 'people' is empty")
+                    return
+                
+                for doc in all_docs:
+                    data = doc.to_dict()
+                    if not data:
+                        continue
+                    data["id"] = doc.id
+                    
+                    # Filter: only include people with embeddings
+                    if not data.get("has_embedding"):
+                        continue
+                    
+                    # Convert embedding list back to numpy array
+                    if "embedding" in data and data["embedding"]:
+                        data["embedding_array"] = np.array(data["embedding"], dtype=np.float32)
+                    else:
+                        data["embedding_array"] = None
+                        
+                    result.append(data)
+                    
+            except Exception as e:
+                error[0] = e
+            finally:
+                completed.set()
         
-        print(f"[Firebase] Loaded {len(people)} people with embeddings")
+        # Start fetch in daemon thread (will be killed when main thread exits)
+        thread = threading.Thread(target=fetch_docs, daemon=True)
+        thread.start()
+        
+        # Wait for completion or timeout
+        if completed.wait(timeout=timeout_seconds):
+            if error[0]:
+                print(f"[Firebase] Fetch error: {error[0]}")
+                return []
+            print(f"[Firebase] Loaded {len(result)} people with embeddings")
+            return result
+        else:
+            print(f"[Firebase] Fetch timed out after {timeout_seconds}s - continuing without Firestore sync")
+            # Thread is daemon, so it won't block program exit
+            return []
+        
+    except Exception as e:
+        print(f"[Firebase] Fetch error: {e}")
+        return []
         return people
         
     except Exception as e:
