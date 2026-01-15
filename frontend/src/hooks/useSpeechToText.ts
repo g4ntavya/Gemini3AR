@@ -4,6 +4,7 @@
  */
 
 import { useRef, useCallback, useReducer } from 'react';
+import { API } from '../config/api';
 
 interface ExtractedInfo {
     name: string | null;
@@ -117,7 +118,7 @@ export function useSpeechToText() {
                     formData.append('audio', audioBlob, 'recording.webm');
 
                     console.log('[STT] Sending to Gemini (transcribe + extract)...');
-                    const response = await fetch('http://localhost:8000/api/transcribe-and-extract', {
+                    const response = await fetch(API.transcribeAndExtract, {
                         method: 'POST',
                         body: formData,
                     });

@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { Person } from '../types';
+import { API } from '../config/api';
 
 interface DashboardSidebarProps {
     isOpen: boolean;
@@ -25,7 +26,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
     const fetchPeople = async () => {
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:8000/people');
+            const res = await fetch(API.people);
             if (res.ok) {
                 const data = await res.json();
                 setPeople(data);

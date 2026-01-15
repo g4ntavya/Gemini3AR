@@ -9,8 +9,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ConnectionStatus, FaceData, RecognitionResult } from '../types';
+import { WS_URL } from '../config/api';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws';
 const HEARTBEAT_INTERVAL = 15000;
 
 interface UseWebSocketReturn {

@@ -16,6 +16,7 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { useFaceDetection } from './hooks/useFaceDetection';
 import { cropFaceFromVideo } from './utils/faceUtils';
 import { Person } from './types';
+import { API } from './config/api';
 
 // Recognition settings - FAST for real-time feel
 const RECOGNITION_INTERVAL = 200; // Faster recognition (was 500)
@@ -210,7 +211,7 @@ function App() {
         console.log('[App] Deleting person:', personId);
 
         try {
-            const res = await fetch(`http://localhost:8000/people/${personId}`, {
+            const res = await fetch(`${API.people}/${personId}`, {
                 method: 'DELETE',
             });
 
@@ -237,7 +238,7 @@ function App() {
 
         try {
             if (isEditing && editingPerson) {
-                await fetch(`http://localhost:8000/people/${editingPerson.id}`, {
+                await fetch(`${API.people}/${editingPerson.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -248,7 +249,7 @@ function App() {
                     }),
                 });
             } else {
-                const createRes = await fetch('http://localhost:8000/people', {
+                const createRes = await fetch(API.people, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -263,7 +264,7 @@ function App() {
                 const person = await createRes.json();
 
                 if (data.faceImageBase64) {
-                    await fetch(`http://localhost:8000/register-face/${person.id}`, {
+                    await fetch(API.registerFace(person.id), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({

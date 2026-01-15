@@ -3,6 +3,10 @@
  * Clean, minimal, award-winning design
  */
 
+/* Font imports must be first */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;500&display=swap');
+
 /* ============================================
    Minecraft Font
    ============================================ */
@@ -79,9 +83,6 @@ body,
 /* ============================================
    Landing Page - Editorial Bold Typography
    ============================================ */
-
-/* Import display font */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&display=swap');
 
 .landing {
   width: 100vw;
@@ -1307,8 +1308,6 @@ body,
 /* ============================================
    Ask Gemini Button
    ============================================ */
-@import url('https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;500&display=swap');
-
 .ask-gemini-btn {
   position: fixed;
   bottom: 100px;
