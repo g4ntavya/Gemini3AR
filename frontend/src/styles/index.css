@@ -1553,22 +1553,44 @@ body,
    ============================================ */
 @media screen and (max-width: 768px) {
 
-  /* Fullscreen camera - remove black dead area */
+  /* Fullscreen camera - extend content behind safe areas */
   html,
   body,
   #root {
-    background: transparent;
+    background: #000;
+    /* Use large viewport height to include Safari UI areas */
+    min-height: 100vh;
+    min-height: 100lvh;
   }
 
   .app-container {
-    background: transparent;
+    background: #000;
+    position: fixed;
+    /* Extend into safe areas using negative margins and padding */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /* Use environment variables to extend behind safe areas */
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+    margin-top: calc(-1 * env(safe-area-inset-top, 0));
+    margin-bottom: calc(-1 * env(safe-area-inset-bottom, 0));
+    /* Total height includes safe areas */
+    height: calc(100% + env(safe-area-inset-top, 0) + env(safe-area-inset-bottom, 0));
+    width: 100%;
+    overflow: hidden;
   }
 
   .video-container {
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    /* Dynamic viewport height for iOS */
+    position: absolute;
+    top: calc(-1 * env(safe-area-inset-top, 0));
+    left: 0;
+    width: 100%;
+    /* Height extends into both safe areas */
+    height: calc(100% + env(safe-area-inset-top, 0) + env(safe-area-inset-bottom, 0));
   }
 
   .video-feed {
@@ -1577,10 +1599,21 @@ body,
     object-fit: cover;
   }
 
-  /* Smaller face label for mobile */
+  /* =============================================
+     MOBILE FACE LABEL POSITIONING - ADJUST HERE!
+     =============================================
+     Change these values to move the label:
+     - translateY: negative = up, positive = down (relative to face)
+     - translateX: negative = left, positive = right
+  */
   .face-label {
-    transform: translateY(-100%) translateX(20px);
-    /* Position above and to the right */
+    /* ADJUST THESE VALUES FOR MOBILE: */
+    --mobile-label-offset-y: -180%;
+    /* Move up (above head) */
+    --mobile-label-offset-x: 60px;
+    /* Move right (away from face) */
+
+    transform: translateY(var(--mobile-label-offset-y)) translateX(var(--mobile-label-offset-x));
   }
 
   .label-content {
@@ -1720,23 +1753,45 @@ body,
   }
 }
 
-/* iOS Safari safe area handling */
+/* iOS Safari safe area handling - UI elements inside safe zone */
 @supports (padding-top: env(safe-area-inset-top)) {
   @media screen and (max-width: 768px) {
+
+    /* Top UI elements - below Dynamic Island/notch */
     .status-indicator {
-      top: calc(12px + env(safe-area-inset-top));
+      top: calc(16px + env(safe-area-inset-top));
+      left: calc(16px + env(safe-area-inset-left));
     }
 
     .back-button {
-      top: calc(12px + env(safe-area-inset-top));
+      top: calc(16px + env(safe-area-inset-top));
+      right: calc(16px + env(safe-area-inset-right));
     }
 
     .menu-button {
-      top: calc(60px + env(safe-area-inset-top));
+      top: calc(70px + env(safe-area-inset-top));
+      left: calc(16px + env(safe-area-inset-left));
     }
 
+    /* Bottom UI elements - above home indicator */
     .ask-gemini-btn {
-      bottom: calc(24px + env(safe-area-inset-bottom));
+      bottom: calc(30px + env(safe-area-inset-bottom));
+    }
+
+    /* Sidebar safe areas */
+    .dashboard-sidebar {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .sidebar-header {
+      padding-top: calc(20px + env(safe-area-inset-top));
+    }
+
+    /* Gemini response overlay */
+    .gemini-response-card {
+      margin-top: env(safe-area-inset-top);
+      margin-bottom: env(safe-area-inset-bottom);
     }
   }
 }

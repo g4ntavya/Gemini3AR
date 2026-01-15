@@ -1,0 +1,17 @@
+{
+    "name": "RemindAR",
+    "short_name": "RemindAR",
+    "description": "AI-powered AR memory assistant",
+    "start_url": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#000000",
+    "theme_color": "#000000",
+    "icons": [
+        {
+            "src": "/vite.svg",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        }
+    ]
+}

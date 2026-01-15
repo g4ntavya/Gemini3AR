@@ -9,7 +9,7 @@ export default defineConfig({
         port: 5174,
         host: true,
         https: true,
-        // Proxy API requests to the backend (solves mixed content issue on mobile)
+        // Proxy API requests to backend (solves HTTPS/HTTP mixed content on mobile)
         proxy: {
             '/api': {
                 target: 'http://localhost:8000',
@@ -32,9 +32,5 @@ export default defineConfig({
                 changeOrigin: true,
             },
         },
-    },
-    // Optimize dependencies
-    optimizeDeps: {
-        include: ['three', '@react-three/fiber', '@react-three/drei'],
     },
 })
