@@ -1549,6 +1549,199 @@ body,
 }
 
 /* ============================================
+   Mobile-Only Responsiveness
+   ============================================ */
+@media screen and (max-width: 768px) {
+
+  /* Fullscreen camera - remove black dead area */
+  html,
+  body,
+  #root {
+    background: transparent;
+  }
+
+  .app-container {
+    background: transparent;
+  }
+
+  .video-container {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    /* Dynamic viewport height for iOS */
+  }
+
+  .video-feed {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Smaller face label for mobile */
+  .face-label {
+    transform: translateY(-100%) translateX(20px);
+    /* Position above and to the right */
+  }
+
+  .label-content {
+    padding: 10px 14px;
+    border-radius: 10px;
+    max-width: 160px;
+  }
+
+  .label-name {
+    font-size: 14px;
+  }
+
+  .label-relation {
+    font-size: 10px;
+  }
+
+  .label-date {
+    font-size: 9px;
+  }
+
+  .label-context {
+    font-size: 11px;
+    max-width: 140px;
+  }
+
+  .label-actions {
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .action-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  /* Smaller expanded card */
+  .face-label.expanded .label-content {
+    max-width: 200px;
+  }
+
+  /* Smaller name tag */
+  .minecraft-nametag {
+    transform: translateX(-50%) translateY(-20px);
+  }
+
+  .nametag-text {
+    font-size: 18px;
+    padding: 4px 10px;
+  }
+
+  /* Smaller status indicator */
+  .status-indicator {
+    top: 12px;
+    left: 12px;
+    padding: 8px 14px;
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  /* Smaller menu button */
+  .menu-button {
+    top: 60px;
+    left: 12px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .menu-button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Smaller back button */
+  .back-button {
+    top: 12px;
+    right: 12px;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  /* Smaller Ask Gemini button */
+  .ask-gemini-btn {
+    bottom: 24px;
+    padding: 10px 18px;
+    font-size: 14px;
+    border-radius: 24px;
+  }
+
+  .ask-gemini-btn .gemini-star {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Mobile sidebar adjustments */
+  .dashboard-sidebar {
+    width: 100vw;
+  }
+
+  /* Gemini response smaller on mobile */
+  .gemini-response-card {
+    width: 95vw;
+    max-height: 70vh;
+    border-radius: 16px;
+  }
+
+  .response-header {
+    padding: 16px 20px;
+  }
+
+  .response-text {
+    padding: 16px 20px;
+    font-size: 14px;
+  }
+}
+
+/* Extra small phones */
+@media screen and (max-width: 375px) {
+  .label-content {
+    padding: 8px 12px;
+    max-width: 140px;
+  }
+
+  .label-name {
+    font-size: 13px;
+  }
+
+  .nametag-text {
+    font-size: 16px;
+    padding: 3px 8px;
+  }
+
+  .ask-gemini-btn {
+    bottom: 20px;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+}
+
+/* iOS Safari safe area handling */
+@supports (padding-top: env(safe-area-inset-top)) {
+  @media screen and (max-width: 768px) {
+    .status-indicator {
+      top: calc(12px + env(safe-area-inset-top));
+    }
+
+    .back-button {
+      top: calc(12px + env(safe-area-inset-top));
+    }
+
+    .menu-button {
+      top: calc(60px + env(safe-area-inset-top));
+    }
+
+    .ask-gemini-btn {
+      bottom: calc(24px + env(safe-area-inset-bottom));
+    }
+  }
+}
+
+/* ============================================
    Accessibility
    ============================================ */
 @media (prefers-reduced-motion: reduce) {
