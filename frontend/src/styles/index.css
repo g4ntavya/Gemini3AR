@@ -7,7 +7,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;500&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Rozha+One&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+
+/* Helvetica Neue - Local fonts */
+@font-face {
+  font-family: 'Helvetica Neue';
+  src: url('/fonts/HelveticaNeueMedium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Helvetica Neue';
+  src: url('/fonts/HelveticaNeueThinItalic.otf') format('opentype');
+  font-weight: 300;
+  font-style: italic;
+}
 
 /* ============================================
    Base
@@ -41,7 +55,7 @@ body,
   height: 100%;
   overflow: hidden;
   background: var(--color-bg);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
 }
@@ -110,7 +124,7 @@ body,
 
 /* Relation - Inter Light Italic */
 .face-label-text .label-relation {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 14px;
   font-weight: 300;
   font-style: italic;
@@ -120,7 +134,7 @@ body,
 
 /* Context - Inter Medium */
 .face-label-text .label-context {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 16px;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.85);
@@ -132,7 +146,7 @@ body,
 
 /* Status text for unknown faces */
 .face-label-text .label-status {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 18px;
   font-weight: 500;
   color: #ffffff;
@@ -160,7 +174,7 @@ body,
 }
 
 .nav-brand {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 3px;
@@ -173,7 +187,7 @@ body,
 }
 
 .nav-link {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 12px;
   font-weight: 400;
   letter-spacing: 1px;
@@ -200,7 +214,7 @@ body,
 }
 
 .eyebrow {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 2.5px;
@@ -224,7 +238,7 @@ body,
 }
 
 .description {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 15px;
   font-weight: 400;
   line-height: 1.7;
@@ -239,7 +253,7 @@ body,
   align-items: center;
   gap: 16px;
   padding: 16px 28px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 1.5px;
@@ -279,7 +293,7 @@ body,
 }
 
 .scroll-text {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 2px;
@@ -364,7 +378,7 @@ body,
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  font-family: 'Inter', monospace;
+  font-family: 'Helvetica Neue', monospace;
   font-size: 11px;
   letter-spacing: 0.3px;
   color: rgba(255, 255, 255, 0.6);
@@ -460,7 +474,7 @@ body,
 .add-person-btn {
   position: absolute;
   padding: 10px 18px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 12px;
   font-weight: 500;
   color: #ffffff;
@@ -971,7 +985,7 @@ body,
 }
 
 .ar-modal-title {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 1px;
@@ -989,7 +1003,7 @@ body,
 .ar-input {
   width: 100%;
   padding: 14px 16px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 14px;
   color: #fff;
   background: rgba(255, 255, 255, 0.05);
@@ -1018,7 +1032,7 @@ body,
   width: 100%;
   padding: 12px 16px;
   margin-bottom: 16px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.6);
   background: rgba(255, 255, 255, 0.05);
@@ -1061,7 +1075,7 @@ body,
 .ar-btn {
   flex: 1;
   padding: 14px 16px;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 13px;
   font-weight: 500;
   border: none;
@@ -1547,7 +1561,7 @@ body,
 }
 
 .response-title {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Helvetica Neue', sans-serif;
   font-size: 18px;
   font-weight: 500;
   color: #ffffff;
