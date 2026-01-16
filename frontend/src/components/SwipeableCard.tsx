@@ -1,5 +1,5 @@
 /**
- * Swipeable Person Card - iOS style swipe to reveal actions
+ * Swipeable Person Card - iOS style swipe with spring animation
  * Real-time tracking for touch, mouse drag, and trackpad
  */
 
@@ -13,7 +13,7 @@ interface SwipeableCardProps {
     onSpeak: (person: Person) => void;
 }
 
-const ACTION_WIDTH = 140; // width of action buttons area
+const ACTION_WIDTH = 152; // width of action buttons area (70+70+12 gap)
 const SNAP_THRESHOLD = 0.2; // 20% of ACTION_WIDTH to snap open
 
 export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCardProps) {
@@ -25,7 +25,7 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
     const cardRef = useRef<HTMLDivElement>(null);
     const snapTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-    // Snap to open or closed based on current offset
+    // Snap to open or closed with spring effect
     const snapToPosition = useCallback(() => {
         const threshold = ACTION_WIDTH * SNAP_THRESHOLD;
         if (offsetX >= threshold) {
@@ -38,7 +38,7 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
         setIsDragging(false);
     }, [offsetX]);
 
-    // Touch handlers (mobile)
+    // Touch handlers
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
         setIsDragging(true);
         startXRef.current = e.touches[0].clientX;
@@ -48,7 +48,8 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
     const handleTouchMove = useCallback((e: React.TouchEvent) => {
         const diff = startXRef.current - e.touches[0].clientX;
         let newOffset = startOffsetRef.current + diff;
-        newOffset = Math.max(0, Math.min(ACTION_WIDTH, newOffset));
+        // Allow slight overshoot for spring feel
+        newOffset = Math.max(-20, Math.min(ACTION_WIDTH + 20, newOffset));
         setOffsetX(newOffset);
     }, []);
 
@@ -56,10 +57,9 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
         snapToPosition();
     }, [snapToPosition]);
 
-    // Mouse drag handlers (desktop)
+    // Mouse drag handlers
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if ((e.target as HTMLElement).closest('button')) return;
-
         setIsDragging(true);
         startXRef.current = e.clientX;
         startOffsetRef.current = offsetX;
@@ -71,59 +71,46 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
             if (!isDragging) return;
             const diff = startXRef.current - e.clientX;
             let newOffset = startOffsetRef.current + diff;
-            newOffset = Math.max(0, Math.min(ACTION_WIDTH, newOffset));
+            newOffset = Math.max(-20, Math.min(ACTION_WIDTH + 20, newOffset));
             setOffsetX(newOffset);
         };
 
         const handleMouseUp = () => {
-            if (isDragging) {
-                snapToPosition();
-            }
+            if (isDragging) snapToPosition();
         };
 
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
     }, [isDragging, snapToPosition]);
 
-    // Wheel/trackpad - real-time tracking with delayed snap
+    // Wheel/trackpad
     useEffect(() => {
         const card = cardRef.current;
         if (!card) return;
 
         const handleWheel = (e: WheelEvent) => {
-            // Only respond to horizontal scroll
             if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 0.3) {
                 e.preventDefault();
                 setIsDragging(true);
 
-                // Real-time update - directly apply wheel delta
                 setOffsetX(prev => {
                     const newOffset = prev + e.deltaX;
-                    return Math.max(0, Math.min(ACTION_WIDTH, newOffset));
+                    return Math.max(-20, Math.min(ACTION_WIDTH + 20, newOffset));
                 });
 
-                // Debounce snap after wheel stops
-                if (snapTimeoutRef.current) {
-                    clearTimeout(snapTimeoutRef.current);
-                }
-                snapTimeoutRef.current = setTimeout(() => {
-                    snapToPosition();
-                }, 80);
+                if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
+                snapTimeoutRef.current = setTimeout(() => snapToPosition(), 80);
             }
         };
 
         card.addEventListener('wheel', handleWheel, { passive: false });
-
         return () => {
             card.removeEventListener('wheel', handleWheel);
-            if (snapTimeoutRef.current) {
-                clearTimeout(snapTimeoutRef.current);
-            }
+            if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
         };
     }, [snapToPosition]);
 
@@ -145,14 +132,18 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
         onDelete(person);
     };
 
+    // Clamp offset for visual rendering (don't show overshoot visually)
+    const visualOffset = Math.max(0, Math.min(ACTION_WIDTH, offsetX));
+
     return (
         <div className="swipeable-card-container">
-            {/* Action buttons */}
+            {/* Action buttons - separate from card with gap */}
             <div
                 className="swipe-actions"
                 style={{
-                    opacity: offsetX / ACTION_WIDTH,
-                    pointerEvents: offsetX > ACTION_WIDTH * 0.5 ? 'auto' : 'none'
+                    opacity: Math.min(1, visualOffset / (ACTION_WIDTH * 0.5)),
+                    transform: `translateX(${Math.max(0, ACTION_WIDTH - visualOffset)}px)`,
+                    transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease'
                 }}
             >
                 <button className="swipe-action-btn edit-btn" onClick={handleEdit}>
@@ -171,13 +162,14 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
                 </button>
             </div>
 
-            {/* Main card */}
+            {/* Main card with spring animation */}
             <div
                 ref={cardRef}
                 className={`person-card ${isOpen ? 'swiped' : ''}`}
                 style={{
-                    transform: `translateX(-${offsetX}px)`,
-                    transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.25, 0.1, 0.25, 1)'
+                    transform: `translateX(-${visualOffset}px)`,
+                    // Spring animation: cubic-bezier with overshoot
+                    transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
                 }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
