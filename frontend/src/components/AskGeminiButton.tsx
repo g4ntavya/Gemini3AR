@@ -112,23 +112,15 @@ export function AskGeminiButton({ onResponse }: AskGeminiButtonProps) {
             onClick={handleClick}
             disabled={isProcessing}
         >
-            {/* Gemini Star Icon */}
+            {/* Gemini Star Icon - always white */}
             <svg className="gemini-star" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path
                     d="M14 0C14 7.732 7.732 14 0 14C7.732 14 14 20.268 14 28C14 20.268 20.268 14 28 14C20.268 14 14 7.732 14 0Z"
-                    fill={isRecording ? '#fff' : 'url(#gemini-gradient)'}
+                    fill="white"
                 />
-                <defs>
-                    <linearGradient id="gemini-gradient" x1="2" y1="2" x2="26" y2="26" gradientUnits="userSpaceOnUse">
-                        <stop offset="0%" stopColor="#1A73E8" />
-                        <stop offset="35%" stopColor="#8E24AA" />
-                        <stop offset="65%" stopColor="#D93025" />
-                        <stop offset="100%" stopColor="#F9AB00" />
-                    </linearGradient>
-                </defs>
             </svg>
             <span className="btn-label">
-                {isProcessing ? 'Thinking...' : isRecording ? 'Stop' : 'Ask Gemini'}
+                {isProcessing ? 'Thinking...' : isRecording ? 'Stop' : 'Ask'}
             </span>
         </button>
     );
