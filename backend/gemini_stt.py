@@ -2,13 +2,6 @@
 Gemini Speech-to-Text + Extraction Service
 ==========================================
 
-Uses google-generativeai SDK with gemini-1.5-flash model.
-
-Features:
-- Transcribes audio (any language: English, Hindi, Hinglish)
-- Extracts structured fields (name, relation, context) in one call
-"""
-
 import base64
 import json
 import re

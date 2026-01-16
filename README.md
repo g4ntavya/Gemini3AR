@@ -11,7 +11,7 @@ RemindAR uses your webcam to detect faces, recognize identities, and display con
 **How it works:**
 - Face detection runs in the browser using MediaPipe
 - Face recognition uses InsightFace embeddings on the backend
-- **Gemini 3 Flash** for voice input transcription and field extraction
+- **Gemini 3.0 preview** for voice input transcription, extraction, and context queries
 - Native **Hindi/Hinglish** support for multilingual users
 - Data syncs between local SQLite and Firebase Firestore
 
@@ -54,25 +54,46 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173` and allow camera access.
+Open `https://localhost:5173` and allow camera access.
+
+> **Note**: HTTPS is required for camera/microphone access. The dev server uses a self-signed certificate.
 
 ---
 
 ## Features
 
-**Face Detection**  
-MediaPipe runs in-browser for fast detection.
+### Face Detection & Recognition
+- **MediaPipe** runs in-browser for fast, client-side detection
+- **InsightFace** embeddings matched using cosine similarity on the backend
+- Real-time WebSocket communication for instant results
 
-**Face Recognition**  
-InsightFace embeddings matched using cosine similarity.
+### AR Face Labels (Redesigned)
+- **Modern typography**: Rozha One serif for names, Helvetica Neue for details
+- **Hover-activated blur box**: Appears on hover (desktop) or tap (mobile)
+- **Auto-fade**: Box fades after 3 seconds of inactivity
 
-**Voice Registration (Powered by Gemini 3 Flash)**  
-Speak naturally: "That's Aditya, my friend, we met for coffee"  
-Gemini transcribes + extracts structured data in ONE call.  
-Supports English, Hindi, and Hinglish! 🇮🇳
+### Voice Registration (Gemini 3.0 preview)
+- Speak naturally in your language
+- Gemini transcribes + extracts structured data in ONE call
+- Supports English, Hindi, and Hinglish!
 
-**Hybrid Storage**  
-Firestore for cloud sync, SQLite for local reads, in-memory cache for speed.
+### Ask Gemini - Context Memory Queries
+- Tap the **Ask** button to query your contact memory
+- Ask questions like "Who did I talk to about coffee?"
+- Gemini searches your people database and responds naturally
+- **Gemini Insights** overlay shows matched people with context along with date.
+
+### Dashboard Sidebar
+- **Swipeable cards**: iOS-style swipe-to-reveal edit/delete actions
+- **Search**: Filter by name, relation, or context
+- **Newest first**: Most recent entries appear at the top
+- **Text-to-speech**: Read person info aloud
+
+### Mobile & iOS Support
+- **Fullscreen camera** on mobile devices
+- **PWA ready**: Add to home screen for standalone mode
+- **HTTPS**: Required for camera/mic access on iOS
+- **Proxy configuration**: Mobile devices connect through Vite proxy
 
 ---
 
@@ -88,23 +109,30 @@ Firestore for cloud sync, SQLite for local reads, in-memory cache for speed.
 ## Architecture
 
 ```
-Frontend (React + TypeScript)
-├── MediaPipe face detection
-├── WebSocket for recognition
-└── AR overlay with CSS
+Frontend (React + TypeScript + Vite)
+├── MediaPipe face detection (in-browser)
+├── WebSocket for face recognition
+├── AR overlay with CSS blur effects
+├── Swipeable dashboard cards
+└── Ask Gemini voice queries
 
 Backend (FastAPI + Python)
 ├── InsightFace recognition
-├── Gemini 3 Flash (transcription + extraction)
+├── Gemini 3.0 preview (transcription + extraction + queries)
 └── SQLite + Firebase storage
 ```
 
 ### Gemini Integration
 
 ```
-User speaks → Gemini 3 Flash → { transcription, name, relation, context }
-                (single API call)
-                
+Voice Registration:
+User speaks → Gemini 3.0 preview → { transcription, name, relation, context }
+                 (single API call)
+
+Context Queries:
+User asks → Gemini 3.0 preview → { answer, matched people }
+                 (searches your database)
+                 
 Benefits:
 ✅ Hindi/Hinglish works seamlessly
 ✅ Single API call (fast)
@@ -121,18 +149,31 @@ RemindAR/
 ├── backend/
 │   ├── main.py              # FastAPI server
 │   ├── face_recognition.py  # InsightFace
-│   ├── gemini_stt.py        # Gemini transcription + extraction
-│   ├── gemini_service.py    # Gemini summarization/normalization
+│   ├── gemini_stt.py        # Voice transcription + extraction
+│   ├── ask_gemini.py        # Context memory queries
 │   ├── config.py            # API key configuration
 │   ├── database.py          # SQLite
-│   └── firebase_sync.py     # Firestore
+│   └── firebase_sync.py     # Firestore sync
 │
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx
 │   │   ├── components/
-│   │   └── hooks/
-│   └── package.json
+│   │   │   ├── AROverlay.tsx        # Face labels with hover box
+│   │   │   ├── AskGeminiButton.tsx  # Voice query button
+│   │   │   ├── DashboardSidebar.tsx # People management
+│   │   │   ├── SwipeableCard.tsx    # iOS-style swipe cards
+│   │   │   └── GeminiResponseOverlay.tsx
+│   │   ├── hooks/
+│   │   │   ├── useFaceDetection.ts
+│   │   │   ├── useWebSocket.ts
+│   │   │   └── useSpeechToText.ts
+│   │   └── styles/
+│   │       └── index.css            # Global styles + fonts
+│   ├── public/
+│   │   ├── fonts/                   # Helvetica Neue, Rozha One
+│   │   └── manifest.json            # PWA config
+│   └── vite.config.ts               # HTTPS + proxy config
 │
 └── README.md
 ```
@@ -143,10 +184,7 @@ RemindAR/
 
 **Backend**: Runs on port 8000
 
-**Frontend**: Create `.env`:
-```env
-VITE_WS_URL=ws://localhost:8000/ws
-```
+**Frontend**: Vite dev server runs on port 5173 with HTTPS
 
 **Gemini API**: Add your key in `backend/.env`:
 ```env
@@ -163,21 +201,24 @@ GEMINI_API_KEY=your-key-here
 Check that your Gemini API key is set in `backend/.env`
 
 **Camera not working**  
-Check browser permissions. Try Chrome.
+Check browser permissions. HTTPS is required for camera access.
 
 **Faces not recognized**  
 Register faces first. Good lighting helps.
+
+**Mobile not connecting**  
+Ensure your phone is on the same network. Use the Vite proxy (requests go through frontend server).
 
 ---
 
 ## Tech Stack
 
-- FastAPI
-- MediaPipe
-- InsightFace
-- **Gemini 3 Flash** (transcription + extraction)
-- Firebase Firestore
-- React / TypeScript / Vite
+- **Frontend**: React, TypeScript, Vite, GSAP
+- **Detection**: MediaPipe Face Detection
+- **Recognition**: InsightFace
+- **AI**: Gemini 3.0 preview (transcription, extraction, queries)
+- **Storage**: Firebase Firestore, SQLite
+- **Fonts**: Rozha One, Helvetica Neue
 
 ---
 
