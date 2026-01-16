@@ -1,10 +1,12 @@
 /**
- * AR Overlay - Labels for detected faces with expandable cards
- * Minecraft-style floating name tag above registered users
- * Edit (pencil) and Delete (trash) icon buttons
+ * AR Overlay - Redesigned face labels
+ * Typography:
+ * - Name: Rozha One (serif)
+ * - Relation: Inter Light Italic
+ * - Context: Inter Medium
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { TrackedFace, RecognitionResult } from '../types';
 
 // SVG Icons
@@ -25,6 +27,12 @@ const TrashIcon = () => (
     </svg>
 );
 
+const ChevronIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 18l6-6-6-6" />
+    </svg>
+);
+
 interface AROverlayProps {
     faces: Map<string, TrackedFace>;
     results: Map<string, RecognitionResult>;
@@ -35,6 +43,14 @@ interface AROverlayProps {
     onDeletePerson?: (personId: string) => void;
 }
 
+interface FaceLabelState {
+    showBox: boolean;
+    isExpanded: boolean;
+    fadeTimer: ReturnType<typeof setTimeout> | null;
+}
+
+const AUTO_FADE_DELAY = 3000; // 3 seconds
+
 export function AROverlay({
     faces,
     results,
@@ -44,27 +60,98 @@ export function AROverlay({
     onModifyPerson,
     onDeletePerson,
 }: AROverlayProps) {
-    const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+    const [labelStates, setLabelStates] = useState<Map<string, FaceLabelState>>(new Map());
     const visibleFaces = Array.from(faces.values()).filter(f => f.isVisible);
 
-    const toggleExpand = (trackId: string) => {
-        setExpandedCards(prev => {
-            const next = new Set(prev);
-            if (next.has(trackId)) {
-                next.delete(trackId);
-            } else {
-                next.add(trackId);
-            }
-            return next;
+    // Get or create state for a face
+    const getState = useCallback((faceId: string): FaceLabelState => {
+        return labelStates.get(faceId) || { showBox: false, isExpanded: false, fadeTimer: null };
+    }, [labelStates]);
+
+    // Update state for a face
+    const updateState = useCallback((faceId: string, updates: Partial<FaceLabelState>) => {
+        setLabelStates(prev => {
+            const newMap = new Map(prev);
+            const current = prev.get(faceId) || { showBox: false, isExpanded: false, fadeTimer: null };
+            newMap.set(faceId, { ...current, ...updates });
+            return newMap;
         });
-    };
+    }, []);
+
+    // Start auto-fade timer
+    const startFadeTimer = useCallback((faceId: string) => {
+        const state = labelStates.get(faceId);
+
+        // Clear existing timer
+        if (state?.fadeTimer) {
+            clearTimeout(state.fadeTimer);
+        }
+
+        // Don't auto-fade if expanded
+        if (state?.isExpanded) return;
+
+        const timer = setTimeout(() => {
+            updateState(faceId, { showBox: false, fadeTimer: null });
+        }, AUTO_FADE_DELAY);
+
+        updateState(faceId, { fadeTimer: timer });
+    }, [labelStates, updateState]);
+
+    // Handle hover enter (desktop)
+    const handleMouseEnter = useCallback((faceId: string) => {
+        const state = getState(faceId);
+        if (state.fadeTimer) clearTimeout(state.fadeTimer);
+        updateState(faceId, { showBox: true, fadeTimer: null });
+    }, [getState, updateState]);
+
+    // Handle hover leave (desktop)
+    const handleMouseLeave = useCallback((faceId: string) => {
+        const state = getState(faceId);
+        if (!state.isExpanded) {
+            startFadeTimer(faceId);
+        }
+    }, [getState, startFadeTimer]);
+
+    // Handle click/tap (mobile)
+    const handleClick = useCallback((faceId: string) => {
+        const state = getState(faceId);
+        if (!state.showBox) {
+            updateState(faceId, { showBox: true });
+            startFadeTimer(faceId);
+        }
+    }, [getState, updateState, startFadeTimer]);
+
+    // Toggle expand
+    const toggleExpand = useCallback((faceId: string) => {
+        const state = getState(faceId);
+        const newExpanded = !state.isExpanded;
+
+        // Clear fade timer when expanding
+        if (state.fadeTimer) clearTimeout(state.fadeTimer);
+
+        updateState(faceId, {
+            isExpanded: newExpanded,
+            showBox: true,
+            fadeTimer: null
+        });
+
+        // Start fade timer when collapsing
+        if (!newExpanded) {
+            startFadeTimer(faceId);
+        }
+    }, [getState, updateState, startFadeTimer]);
+
+    // Cleanup timers on unmount
+    useEffect(() => {
+        return () => {
+            labelStates.forEach(state => {
+                if (state.fadeTimer) clearTimeout(state.fadeTimer);
+            });
+        };
+    }, []);
 
     return (
         <div className="ar-overlay">
-            {/* Debug */}
-            <div className="debug-indicator">
-                {visibleFaces.length} face{visibleFaces.length !== 1 ? 's' : ''}
-            </div>
 
             {/* Face labels */}
             {visibleFaces.map((face) => {
@@ -72,26 +159,21 @@ export function AROverlay({
                 const hasResult = result !== undefined;
                 const isKnown = result?.is_known ?? false;
                 const person = result?.person;
-                const relation = result?.display_lines?.[1] || '';
-                const isExpanded = expandedCards.has(face.id);
+                const relation = person?.relation || '';
+                const context = person?.context || '';
+                const state = getState(face.id);
 
-                // Position for the info card (right edge of face)
-                const cardX = Math.min(
-                    Math.max(20, (1 - face.bbox.x) * containerWidth + 20),
-                    containerWidth - 280
+                // Position: right of face
+                const labelX = Math.min(
+                    Math.max(20, (1 - face.bbox.x) * containerWidth + 30),
+                    containerWidth - 300
                 );
-                const cardY = Math.min(
-                    Math.max(60, (face.bbox.y + face.bbox.height / 2) * containerHeight),
-                    containerHeight - 150
+                const labelY = Math.max(
+                    80,
+                    (face.bbox.y + face.bbox.height / 2) * containerHeight - 50
                 );
 
-                // Position for the Minecraft name tag (centered above head)
-                // face.bbox.x is the LEFT edge, so center is x + width/2
-                // We need to account for mirrored video (1 - x)
-                const nameTagX = (1 - (face.bbox.x + face.bbox.width / 2)) * containerWidth;
-                const nameTagY = face.bbox.y * containerHeight - 220; // Higher above the head
-
-                // Determine what text to show
+                // Determine display text
                 let displayText = 'Scanning...';
                 if (hasResult) {
                     displayText = isKnown ? '' : 'Not registered';
@@ -99,90 +181,82 @@ export function AROverlay({
 
                 return (
                     <div key={face.id}>
-                        {/* Minecraft-style floating name tag - ONLY for registered users */}
-                        {isKnown && person?.name && (
-                            <div
-                                className="minecraft-nametag"
-                                style={{
-                                    left: nameTagX,
-                                    top: Math.max(30, nameTagY),
-                                }}
-                            >
-                                <span className="nametag-text">{person.name}</span>
-                            </div>
-                        )}
-
-                        {/* Info card */}
+                        {/* Face label */}
                         <div
-                            className={`face-label ${isExpanded ? 'expanded' : ''}`}
-                            style={{ left: cardX, top: cardY }}
+                            className={`face-label-container ${state.showBox ? 'show-box' : ''} ${state.isExpanded ? 'expanded' : ''}`}
+                            style={{ left: labelX, top: labelY }}
+                            onMouseEnter={() => isKnown && handleMouseEnter(face.id)}
+                            onMouseLeave={() => isKnown && handleMouseLeave(face.id)}
+                            onClick={() => isKnown && handleClick(face.id)}
                         >
-                            <div className="label-content">
-                                <div className="label-header">
-                                    <div className="label-info">
-                                        {/* Show status for unknown, relation for known */}
-                                        {isKnown ? (
-                                            <>
-                                                {/* No name here - it's shown in the floating tag */}
-                                                {relation && <span className="label-relation">{relation}</span>}
-                                            </>
-                                        ) : (
-                                            <span className="label-name">{displayText}</span>
-                                        )}
-                                    </div>
+                            {/* Text content */}
+                            <div className="face-label-text">
+                                {isKnown ? (
+                                    <>
+                                        <span className="label-name">{person?.name || 'Unknown'}</span>
+                                        {relation && <span className="label-relation">{relation}</span>}
+                                        {context && <p className="label-context">{context}</p>}
+                                    </>
+                                ) : (
+                                    <span className="label-status">{displayText}</span>
+                                )}
+                            </div>
 
-                                    {/* Expand arrow for known persons */}
-                                    {isKnown && (
-                                        <button
-                                            className={`expand-btn ${isExpanded ? 'rotated' : ''}`}
-                                            onClick={() => toggleExpand(face.id)}
-                                        >
-                                            ›
-                                        </button>
+                            {/* Blur box background - only visible on hover/click */}
+                            <div className="face-label-box" />
+
+                            {/* Action bar - expand button and actions on same row */}
+                            {isKnown && state.showBox && (
+                                <div className="action-bar">
+                                    <button
+                                        className={`expand-btn ${state.isExpanded ? 'rotated' : ''}`}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleExpand(face.id);
+                                        }}
+                                    >
+                                        <ChevronIcon />
+                                    </button>
+
+                                    {/* Action buttons - visible when expanded */}
+                                    {state.isExpanded && (
+                                        <>
+                                            <button
+                                                className="action-btn edit-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    person?.id && onModifyPerson?.(person.id);
+                                                }}
+                                                title="Edit"
+                                            >
+                                                <PencilIcon />
+                                            </button>
+                                            <button
+                                                className="action-btn delete-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    person?.id && onDeletePerson?.(person.id);
+                                                }}
+                                                title="Delete"
+                                            >
+                                                <TrashIcon />
+                                            </button>
+                                        </>
                                     )}
                                 </div>
-
-                                {/* Context - always visible for known persons */}
-                                {isKnown && person?.context && (
-                                    <p className="label-context">{person.context}</p>
-                                )}
-
-                                {/* Date - always visible */}
-                                {isKnown && person?.last_met && (
-                                    <span className="label-date">{person.last_met}</span>
-                                )}
-
-                                {/* Action buttons - only when expanded */}
-                                {isKnown && (
-                                    <div className={`action-buttons ${isExpanded ? 'show' : ''}`}>
-                                        <button
-                                            className="action-btn edit-btn"
-                                            onClick={() => person?.id && onModifyPerson?.(person.id)}
-                                            title="Edit"
-                                        >
-                                            <PencilIcon />
-                                        </button>
-                                        <button
-                                            className="action-btn delete-btn"
-                                            onClick={() => person?.id && onDeletePerson?.(person.id)}
-                                            title="Delete"
-                                        >
-                                            <TrashIcon />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Add button for unknown */}
-                            {!isKnown && onAddPerson && (
-                                <button
-                                    className="add-person-btn"
-                                    onClick={() => onAddPerson(face.id)}
-                                >
-                                    Add this person
-                                </button>
                             )}
                         </div>
+
+                        {/* Add button for unknown - positioned below the label */}
+                        {!isKnown && onAddPerson && hasResult && (
+                            <button
+                                className="add-person-btn"
+                                style={{ left: labelX, top: labelY + 60 }}
+                                onClick={() => onAddPerson(face.id)}
+                            >
+                                Add this person
+                            </button>
+                        )}
                     </div>
                 );
             })}

@@ -50,15 +50,20 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
         }, 280); // Slightly less than animation duration
     }, [onClose]);
 
-    // Filter people by search query
-    const filteredPeople = people.filter(person => {
-        const query = searchQuery.toLowerCase();
-        return (
-            person.name?.toLowerCase().includes(query) ||
-            person.relation?.toLowerCase().includes(query) ||
-            person.context?.toLowerCase().includes(query)
-        );
-    });
+    // Filter and sort people by search query - newest first (by id descending)
+    const filteredPeople = people
+        .filter(person => {
+            const query = searchQuery.toLowerCase();
+            return (
+                person.name?.toLowerCase().includes(query) ||
+                person.relation?.toLowerCase().includes(query) ||
+                person.context?.toLowerCase().includes(query)
+            );
+        })
+        .sort((a, b) => {
+            // Sort by id descending - newer entries have higher/later ids
+            return (b.id || '').localeCompare(a.id || '');
+        });
 
     // TTS for person info
     const speakPerson = useCallback((person: Person) => {
