@@ -1,6 +1,11 @@
 /**
- * Swipeable Person Card - iOS style swipe with GSAP animations
- * Real-time tracking for touch, mouse drag, and trackpad
+ * Swipeable Person Card - iOS style swipe with GSAP spring animations
+ * 
+ * Features:
+ * - Real-time tracking for touch, mouse, and trackpad
+ * - Spring bounce effect on card (overshoots then bounces back)
+ * - Icons scale up smoothly
+ * - Consistent 8px gaps everywhere
  */
 
 import { useRef, useState, useCallback, useEffect } from 'react';
@@ -14,166 +19,220 @@ interface SwipeableCardProps {
     onSpeak: (person: Person) => void;
 }
 
-const ACTION_WIDTH = 136; // width of action buttons area
-const SNAP_THRESHOLD = 0.2; // 20% to snap open
+// Layout: [Card] 8px [Edit 60px] 8px [Delete 60px] = 136px total
+const ACTION_WIDTH = 136;
+const SNAP_THRESHOLD = 0.25;
 
 export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCardProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const [isDragging, setIsDragging] = useState(false);
+    const isDraggingRef = useRef(false);
     const offsetRef = useRef(0);
     const startXRef = useRef(0);
     const startOffsetRef = useRef(0);
+
+    const containerRef = useRef<HTMLDivElement>(null);
     const cardRef = useRef<HTMLDivElement>(null);
-    const actionsRef = useRef<HTMLDivElement>(null);
+    const editBtnRef = useRef<HTMLButtonElement>(null);
+    const deleteBtnRef = useRef<HTMLButtonElement>(null);
+
     const snapTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-    // Animate to position using GSAP
-    const animateTo = useCallback((targetOffset: number, isSnap: boolean = false) => {
-        if (!cardRef.current || !actionsRef.current) return;
+    // Update visuals during drag (no animation)
+    const updateVisuals = useCallback((offset: number) => {
+        const card = cardRef.current;
+        const editBtn = editBtnRef.current;
+        const deleteBtn = deleteBtnRef.current;
 
-        const clampedOffset = Math.max(0, Math.min(ACTION_WIDTH, targetOffset));
-        offsetRef.current = clampedOffset;
+        if (!card || !editBtn || !deleteBtn) return;
 
-        if (isSnap) {
-            // Spring animation for snap
-            gsap.to(cardRef.current, {
-                x: -clampedOffset,
-                duration: 0.5,
-                ease: 'elastic.out(1, 0.75)',
-            });
-            gsap.to(actionsRef.current, {
-                x: ACTION_WIDTH - clampedOffset,
-                opacity: clampedOffset / ACTION_WIDTH,
-                duration: 0.5,
-                ease: 'elastic.out(1, 0.75)',
-            });
-        } else {
-            // Immediate follow during drag
-            gsap.set(cardRef.current, { x: -clampedOffset });
-            gsap.set(actionsRef.current, {
-                x: ACTION_WIDTH - clampedOffset,
-                opacity: Math.min(1, clampedOffset / (ACTION_WIDTH * 0.5))
-            });
-        }
+        const clamped = Math.max(0, Math.min(ACTION_WIDTH, offset));
+        offsetRef.current = clamped;
+
+        const progress = clamped / ACTION_WIDTH;
+
+        // Card follows directly
+        gsap.set(card, { x: -clamped });
+
+        // Buttons scale based on progress
+        gsap.set(editBtn, {
+            scale: 0.5 + (progress * 0.5),
+            opacity: progress
+        });
+        gsap.set(deleteBtn, {
+            scale: 0.5 + (progress * 0.5),
+            opacity: progress
+        });
+    }, []);
+
+    // Animate to final position with spring bounce
+    const animateToPosition = useCallback((targetOffset: number) => {
+        const card = cardRef.current;
+        const editBtn = editBtnRef.current;
+        const deleteBtn = deleteBtnRef.current;
+
+        if (!card || !editBtn || !deleteBtn) return;
+
+        offsetRef.current = targetOffset;
+        const isOpening = targetOffset > 0;
+
+        // Card animation with spring overshoot
+        gsap.to(card, {
+            x: -targetOffset,
+            duration: 0.6,
+            ease: 'elastic.out(1, 0.5)', // Bouncy spring
+        });
+
+        // Buttons pop in/out
+        gsap.to(editBtn, {
+            scale: isOpening ? 1 : 0.5,
+            opacity: isOpening ? 1 : 0,
+            duration: 0.4,
+            ease: 'back.out(2)',
+        });
+        gsap.to(deleteBtn, {
+            scale: isOpening ? 1 : 0.5,
+            opacity: isOpening ? 1 : 0,
+            duration: 0.4,
+            ease: 'back.out(2)',
+            delay: 0.03,
+        });
     }, []);
 
     // Snap to open or closed
     const snapToPosition = useCallback(() => {
-        const threshold = ACTION_WIDTH * SNAP_THRESHOLD;
-        const newIsOpen = offsetRef.current >= threshold;
+        isDraggingRef.current = false;
+        const shouldOpen = offsetRef.current >= ACTION_WIDTH * SNAP_THRESHOLD;
+        setIsOpen(shouldOpen);
+        animateToPosition(shouldOpen ? ACTION_WIDTH : 0);
+    }, [animateToPosition]);
 
-        setIsOpen(newIsOpen);
-        setIsDragging(false);
-        animateTo(newIsOpen ? ACTION_WIDTH : 0, true);
-    }, [animateTo]);
+    // Kill animations
+    const killAnimations = useCallback(() => {
+        gsap.killTweensOf([cardRef.current, editBtnRef.current, deleteBtnRef.current]);
+    }, []);
+
+    // Start drag
+    const startDrag = useCallback((clientX: number) => {
+        killAnimations();
+        isDraggingRef.current = true;
+        startXRef.current = clientX;
+        startOffsetRef.current = offsetRef.current;
+    }, [killAnimations]);
+
+    // Update drag
+    const updateDrag = useCallback((clientX: number) => {
+        if (!isDraggingRef.current) return;
+        const diff = startXRef.current - clientX;
+        updateVisuals(startOffsetRef.current + diff);
+    }, [updateVisuals]);
+
+    // End drag
+    const endDrag = useCallback(() => {
+        if (!isDraggingRef.current) return;
+        snapToPosition();
+    }, [snapToPosition]);
 
     // Touch handlers
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        gsap.killTweensOf([cardRef.current, actionsRef.current]);
-        setIsDragging(true);
-        startXRef.current = e.touches[0].clientX;
-        startOffsetRef.current = offsetRef.current;
-    }, []);
+        startDrag(e.touches[0].clientX);
+    }, [startDrag]);
 
     const handleTouchMove = useCallback((e: React.TouchEvent) => {
-        if (!isDragging) return;
-        const diff = startXRef.current - e.touches[0].clientX;
-        animateTo(startOffsetRef.current + diff, false);
-    }, [isDragging, animateTo]);
+        updateDrag(e.touches[0].clientX);
+    }, [updateDrag]);
 
-    const handleTouchEnd = useCallback(() => {
-        if (!isDragging) return;
-        snapToPosition();
-    }, [isDragging, snapToPosition]);
+    const handleTouchEnd = useCallback(() => endDrag(), [endDrag]);
 
-    // Mouse drag handlers
+    // Mouse handlers
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if ((e.target as HTMLElement).closest('button')) return;
-        gsap.killTweensOf([cardRef.current, actionsRef.current]);
-        setIsDragging(true);
-        startXRef.current = e.clientX;
-        startOffsetRef.current = offsetRef.current;
+        startDrag(e.clientX);
         e.preventDefault();
-    }, []);
+    }, [startDrag]);
 
+    // Global mouse events
     useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!isDragging) return;
-            const diff = startXRef.current - e.clientX;
-            animateTo(startOffsetRef.current + diff, false);
-        };
-
-        const handleMouseUp = () => {
-            if (isDragging) snapToPosition();
+        const handleMouseMove = (e: MouseEvent) => updateDrag(e.clientX);
+        const handleMouseUp = () => endDrag();
+        const handleMouseLeave = (e: MouseEvent) => {
+            if (e.relatedTarget === null && isDraggingRef.current) endDrag();
         };
 
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('mouseleave', handleMouseLeave);
+
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('mouseleave', handleMouseLeave);
         };
-    }, [isDragging, animateTo, snapToPosition]);
+    }, [updateDrag, endDrag]);
 
-    // Wheel/trackpad - real-time tracking
+    // Wheel/trackpad
     useEffect(() => {
-        const card = cardRef.current;
-        if (!card) return;
+        const container = containerRef.current;
+        if (!container) return;
 
         const handleWheel = (e: WheelEvent) => {
-            if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 0.3) {
+            if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 0.5) {
                 e.preventDefault();
-                gsap.killTweensOf([cardRef.current, actionsRef.current]);
-                setIsDragging(true);
+                killAnimations();
 
-                const newOffset = offsetRef.current + e.deltaX;
-                animateTo(newOffset, false);
+                const newOffset = offsetRef.current + (e.deltaX * 0.7);
+                updateVisuals(newOffset);
 
                 if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
-                snapTimeoutRef.current = setTimeout(() => snapToPosition(), 100);
+                snapTimeoutRef.current = setTimeout(snapToPosition, 120);
             }
         };
 
-        card.addEventListener('wheel', handleWheel, { passive: false });
+        container.addEventListener('wheel', handleWheel, { passive: false });
         return () => {
-            card.removeEventListener('wheel', handleWheel);
+            container.removeEventListener('wheel', handleWheel);
             if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
         };
-    }, [animateTo, snapToPosition]);
+    }, [killAnimations, updateVisuals, snapToPosition]);
 
+    // Close actions
     const closeActions = useCallback(() => {
         setIsOpen(false);
-        setIsDragging(false);
-        animateTo(0, true);
-    }, [animateTo]);
+        animateToPosition(0);
+    }, [animateToPosition]);
 
     const handleEdit = (e: React.MouseEvent) => {
         e.stopPropagation();
+        const p = person;
         closeActions();
-        onEdit(person);
+        setTimeout(() => onEdit(p), 350);
     };
 
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
+        const p = person;
         closeActions();
-        onDelete(person);
+        setTimeout(() => onDelete(p), 350);
     };
 
     return (
-        <div className="swipeable-card-container">
-            {/* Action buttons */}
-            <div
-                ref={actionsRef}
-                className="swipe-actions"
-                style={{ transform: `translateX(${ACTION_WIDTH}px)`, opacity: 0 }}
-            >
-                <button className="swipe-action-btn edit-btn" onClick={handleEdit}>
+        <div ref={containerRef} className="swipeable-card-container">
+            {/* Action buttons - fixed position, card reveals them by sliding */}
+            <div className="swipe-actions">
+                <button
+                    ref={editBtnRef}
+                    className="swipe-action-btn edit-btn"
+                    onClick={handleEdit}
+                >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
                 </button>
-                <button className="swipe-action-btn delete-btn" onClick={handleDelete}>
+                <button
+                    ref={deleteBtnRef}
+                    className="swipe-action-btn delete-btn"
+                    onClick={handleDelete}
+                >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <polyline points="3 6 5 6 21 6" />
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />

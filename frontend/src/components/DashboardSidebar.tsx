@@ -16,10 +16,12 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
     const [people, setPeople] = useState<Person[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isClosing, setIsClosing] = useState(false);
 
     // Fetch people when sidebar opens
     useEffect(() => {
         if (isOpen) {
+            setIsClosing(false);
             fetchPeople();
         }
     }, [isOpen]);
@@ -38,6 +40,15 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
             setLoading(false);
         }
     };
+
+    // Handle close with animation
+    const handleClose = useCallback(() => {
+        setIsClosing(true);
+        setTimeout(() => {
+            onClose();
+            setIsClosing(false);
+        }, 280); // Slightly less than animation duration
+    }, [onClose]);
 
     // Filter people by search query
     const filteredPeople = people.filter(person => {
@@ -60,14 +71,12 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
 
     // Edit person
     const handleEdit = useCallback((person: Person) => {
-        // For now, prompt for new info (you can replace with a modal later)
         const newName = prompt('Edit name:', person.name);
         if (newName === null) return;
 
         const newRelation = prompt('Edit relation:', person.relation || '');
         const newContext = prompt('Edit context:', person.context || '');
 
-        // Update via API
         fetch(`${API.people}/${person.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -79,7 +88,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
             })
         }).then(res => {
             if (res.ok) {
-                fetchPeople(); // Refresh the list
+                fetchPeople();
             }
         }).catch(err => console.error('[Dashboard] Edit failed:', err));
     }, []);
@@ -97,19 +106,22 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
         }).catch(err => console.error('[Dashboard] Delete failed:', err));
     }, []);
 
-    if (!isOpen) return null;
+    if (!isOpen && !isClosing) return null;
 
     return (
         <>
             {/* Backdrop */}
-            <div className="sidebar-backdrop" onClick={onClose} />
+            <div
+                className={`sidebar-backdrop ${isClosing ? 'closing' : ''}`}
+                onClick={handleClose}
+            />
 
             {/* Sidebar */}
-            <div className={`dashboard-sidebar ${isOpen ? 'open' : ''}`}>
+            <div className={`dashboard-sidebar open ${isClosing ? 'closing' : ''}`}>
                 {/* Header */}
                 <div className="sidebar-header">
                     <h2>People</h2>
-                    <button className="close-btn" onClick={onClose}>
+                    <button className="close-btn" onClick={handleClose}>
                         ✕
                     </button>
                 </div>
