@@ -1,10 +1,11 @@
 /**
- * Dashboard Sidebar - Shows all registered people
+ * Dashboard Sidebar - Shows all registered people with swipe actions
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Person } from '../types';
 import { API } from '../config/api';
+import { SwipeableCard } from './SwipeableCard';
 
 interface DashboardSidebarProps {
     isOpen: boolean;
@@ -49,13 +50,52 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
     });
 
     // TTS for person info
-    const speakPerson = (person: Person) => {
+    const speakPerson = useCallback((person: Person) => {
         const text = `${person.name}. ${person.relation || ''}. ${person.context || ''}`;
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
         window.speechSynthesis.speak(utterance);
-    };
+    }, []);
+
+    // Edit person
+    const handleEdit = useCallback((person: Person) => {
+        // For now, prompt for new info (you can replace with a modal later)
+        const newName = prompt('Edit name:', person.name);
+        if (newName === null) return;
+
+        const newRelation = prompt('Edit relation:', person.relation || '');
+        const newContext = prompt('Edit context:', person.context || '');
+
+        // Update via API
+        fetch(`${API.people}/${person.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: newName || person.name,
+                relation: newRelation || person.relation,
+                context: newContext || person.context,
+                last_met: person.last_met
+            })
+        }).then(res => {
+            if (res.ok) {
+                fetchPeople(); // Refresh the list
+            }
+        }).catch(err => console.error('[Dashboard] Edit failed:', err));
+    }, []);
+
+    // Delete person
+    const handleDelete = useCallback((person: Person) => {
+        if (!confirm(`Delete ${person.name}? This cannot be undone.`)) return;
+
+        fetch(`${API.people}/${person.id}`, {
+            method: 'DELETE'
+        }).then(res => {
+            if (res.ok) {
+                setPeople(prev => prev.filter(p => p.id !== person.id));
+            }
+        }).catch(err => console.error('[Dashboard] Delete failed:', err));
+    }, []);
 
     if (!isOpen) return null;
 
@@ -95,30 +135,13 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
                     ) : (
                         <div className="people-list">
                             {filteredPeople.map((person) => (
-                                <div key={person.id} className="person-card">
-                                    <div className="person-info">
-                                        <div className="person-name">{person.name}</div>
-                                        {person.relation && (
-                                            <div className="person-relation">{person.relation}</div>
-                                        )}
-                                        {person.context && (
-                                            <div className="person-context">{person.context}</div>
-                                        )}
-                                        {person.last_met && (
-                                            <div className="person-lastmet">
-                                                Last met: {new Date(person.last_met).toLocaleDateString()}
-                                            </div>
-                                        )}
-                                    </div>
-                                    {/* TTS Button */}
-                                    <button
-                                        className="action-btn speak-btn"
-                                        onClick={() => speakPerson(person)}
-                                        title="Read aloud"
-                                    >
-                                        🔊
-                                    </button>
-                                </div>
+                                <SwipeableCard
+                                    key={person.id}
+                                    person={person}
+                                    onEdit={handleEdit}
+                                    onDelete={handleDelete}
+                                    onSpeak={speakPerson}
+                                />
                             ))}
                         </div>
                     )}
