@@ -1,10 +1,11 @@
 /**
- * Swipeable Person Card - iOS style swipe with spring animation
+ * Swipeable Person Card - iOS style swipe with GSAP animations
  * Real-time tracking for touch, mouse drag, and trackpad
  */
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { Person } from '../types';
+import gsap from 'gsap';
 
 interface SwipeableCardProps {
     person: Person;
@@ -13,66 +14,93 @@ interface SwipeableCardProps {
     onSpeak: (person: Person) => void;
 }
 
-const ACTION_WIDTH = 152; // width of action buttons area (70+70+12 gap)
-const SNAP_THRESHOLD = 0.2; // 20% of ACTION_WIDTH to snap open
+const ACTION_WIDTH = 136; // width of action buttons area
+const SNAP_THRESHOLD = 0.2; // 20% to snap open
 
 export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCardProps) {
-    const [offsetX, setOffsetX] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const offsetRef = useRef(0);
     const startXRef = useRef(0);
     const startOffsetRef = useRef(0);
     const cardRef = useRef<HTMLDivElement>(null);
+    const actionsRef = useRef<HTMLDivElement>(null);
     const snapTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-    // Snap to open or closed with spring effect
+    // Animate to position using GSAP
+    const animateTo = useCallback((targetOffset: number, isSnap: boolean = false) => {
+        if (!cardRef.current || !actionsRef.current) return;
+
+        const clampedOffset = Math.max(0, Math.min(ACTION_WIDTH, targetOffset));
+        offsetRef.current = clampedOffset;
+
+        if (isSnap) {
+            // Spring animation for snap
+            gsap.to(cardRef.current, {
+                x: -clampedOffset,
+                duration: 0.5,
+                ease: 'elastic.out(1, 0.75)',
+            });
+            gsap.to(actionsRef.current, {
+                x: ACTION_WIDTH - clampedOffset,
+                opacity: clampedOffset / ACTION_WIDTH,
+                duration: 0.5,
+                ease: 'elastic.out(1, 0.75)',
+            });
+        } else {
+            // Immediate follow during drag
+            gsap.set(cardRef.current, { x: -clampedOffset });
+            gsap.set(actionsRef.current, {
+                x: ACTION_WIDTH - clampedOffset,
+                opacity: Math.min(1, clampedOffset / (ACTION_WIDTH * 0.5))
+            });
+        }
+    }, []);
+
+    // Snap to open or closed
     const snapToPosition = useCallback(() => {
         const threshold = ACTION_WIDTH * SNAP_THRESHOLD;
-        if (offsetX >= threshold) {
-            setOffsetX(ACTION_WIDTH);
-            setIsOpen(true);
-        } else {
-            setOffsetX(0);
-            setIsOpen(false);
-        }
+        const newIsOpen = offsetRef.current >= threshold;
+
+        setIsOpen(newIsOpen);
         setIsDragging(false);
-    }, [offsetX]);
+        animateTo(newIsOpen ? ACTION_WIDTH : 0, true);
+    }, [animateTo]);
 
     // Touch handlers
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        gsap.killTweensOf([cardRef.current, actionsRef.current]);
         setIsDragging(true);
         startXRef.current = e.touches[0].clientX;
-        startOffsetRef.current = offsetX;
-    }, [offsetX]);
-
-    const handleTouchMove = useCallback((e: React.TouchEvent) => {
-        const diff = startXRef.current - e.touches[0].clientX;
-        let newOffset = startOffsetRef.current + diff;
-        // Allow slight overshoot for spring feel
-        newOffset = Math.max(-20, Math.min(ACTION_WIDTH + 20, newOffset));
-        setOffsetX(newOffset);
+        startOffsetRef.current = offsetRef.current;
     }, []);
 
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        if (!isDragging) return;
+        const diff = startXRef.current - e.touches[0].clientX;
+        animateTo(startOffsetRef.current + diff, false);
+    }, [isDragging, animateTo]);
+
     const handleTouchEnd = useCallback(() => {
+        if (!isDragging) return;
         snapToPosition();
-    }, [snapToPosition]);
+    }, [isDragging, snapToPosition]);
 
     // Mouse drag handlers
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if ((e.target as HTMLElement).closest('button')) return;
+        gsap.killTweensOf([cardRef.current, actionsRef.current]);
         setIsDragging(true);
         startXRef.current = e.clientX;
-        startOffsetRef.current = offsetX;
+        startOffsetRef.current = offsetRef.current;
         e.preventDefault();
-    }, [offsetX]);
+    }, []);
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (!isDragging) return;
             const diff = startXRef.current - e.clientX;
-            let newOffset = startOffsetRef.current + diff;
-            newOffset = Math.max(-20, Math.min(ACTION_WIDTH + 20, newOffset));
-            setOffsetX(newOffset);
+            animateTo(startOffsetRef.current + diff, false);
         };
 
         const handleMouseUp = () => {
@@ -85,9 +113,9 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging, snapToPosition]);
+    }, [isDragging, animateTo, snapToPosition]);
 
-    // Wheel/trackpad
+    // Wheel/trackpad - real-time tracking
     useEffect(() => {
         const card = cardRef.current;
         if (!card) return;
@@ -95,15 +123,14 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
         const handleWheel = (e: WheelEvent) => {
             if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 0.3) {
                 e.preventDefault();
+                gsap.killTweensOf([cardRef.current, actionsRef.current]);
                 setIsDragging(true);
 
-                setOffsetX(prev => {
-                    const newOffset = prev + e.deltaX;
-                    return Math.max(-20, Math.min(ACTION_WIDTH + 20, newOffset));
-                });
+                const newOffset = offsetRef.current + e.deltaX;
+                animateTo(newOffset, false);
 
                 if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
-                snapTimeoutRef.current = setTimeout(() => snapToPosition(), 80);
+                snapTimeoutRef.current = setTimeout(() => snapToPosition(), 100);
             }
         };
 
@@ -112,13 +139,13 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
             card.removeEventListener('wheel', handleWheel);
             if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
         };
-    }, [snapToPosition]);
+    }, [animateTo, snapToPosition]);
 
     const closeActions = useCallback(() => {
-        setOffsetX(0);
         setIsOpen(false);
         setIsDragging(false);
-    }, []);
+        animateTo(0, true);
+    }, [animateTo]);
 
     const handleEdit = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -132,19 +159,13 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
         onDelete(person);
     };
 
-    // Clamp offset for visual rendering (don't show overshoot visually)
-    const visualOffset = Math.max(0, Math.min(ACTION_WIDTH, offsetX));
-
     return (
         <div className="swipeable-card-container">
-            {/* Action buttons - separate from card with gap */}
+            {/* Action buttons */}
             <div
+                ref={actionsRef}
                 className="swipe-actions"
-                style={{
-                    opacity: Math.min(1, visualOffset / (ACTION_WIDTH * 0.5)),
-                    transform: `translateX(${Math.max(0, ACTION_WIDTH - visualOffset)}px)`,
-                    transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease'
-                }}
+                style={{ transform: `translateX(${ACTION_WIDTH}px)`, opacity: 0 }}
             >
                 <button className="swipe-action-btn edit-btn" onClick={handleEdit}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -162,15 +183,10 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
                 </button>
             </div>
 
-            {/* Main card with spring animation */}
+            {/* Main card */}
             <div
                 ref={cardRef}
                 className={`person-card ${isOpen ? 'swiped' : ''}`}
-                style={{
-                    transform: `translateX(-${visualOffset}px)`,
-                    // Spring animation: cubic-bezier with overshoot
-                    transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
