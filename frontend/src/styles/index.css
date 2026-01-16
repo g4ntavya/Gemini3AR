@@ -122,11 +122,11 @@ body,
   letter-spacing: -0.5px;
 }
 
-/* Relation - Inter Light Italic */
+/* Relation - Helvetica Neue Light Italic */
 .face-label-text .label-relation {
   font-family: 'Helvetica Neue', sans-serif;
   font-size: 14px;
-  font-weight: 300;
+  font-weight: 400;
   font-style: italic;
   color: rgba(255, 255, 255, 0.6);
   margin-top: 2px;
@@ -1419,7 +1419,9 @@ body,
   touch-action: pan-y pinch-zoom;
   cursor: grab;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  /* Transform handled by GSAP */
+  /* GPU acceleration for smooth transforms */
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .swipeable-card-container .person-card:active {

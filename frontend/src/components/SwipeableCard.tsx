@@ -1,16 +1,15 @@
 /**
- * Swipeable Person Card - iOS style swipe with GSAP spring animations
+ * Swipeable Person Card - iOS style swipe with pure CSS animations
  * 
  * Features:
  * - Real-time tracking for touch, mouse, and trackpad
- * - Spring bounce effect on card (overshoots then bounces back)
+ * - Smooth CSS transitions for snap animations
  * - Icons scale up smoothly
  * - Consistent 8px gaps everywhere
  */
 
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { Person } from '../types';
-import gsap from 'gsap';
 
 interface SwipeableCardProps {
     person: Person;
@@ -25,6 +24,7 @@ const SNAP_THRESHOLD = 0.25;
 
 export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCardProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const [isAnimating, setIsAnimating] = useState(false);
     const isDraggingRef = useRef(false);
     const offsetRef = useRef(0);
     const startXRef = useRef(0);
@@ -35,10 +35,8 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
     const editBtnRef = useRef<HTMLButtonElement>(null);
     const deleteBtnRef = useRef<HTMLButtonElement>(null);
 
-    const snapTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
-
-    // Update visuals during drag (no animation)
-    const updateVisuals = useCallback((offset: number) => {
+    // Update visuals during drag - direct DOM, no transitions
+    const updateVisuals = useCallback((offset: number, animate = false) => {
         const card = cardRef.current;
         const editBtn = editBtnRef.current;
         const deleteBtn = deleteBtnRef.current;
@@ -49,81 +47,53 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
         offsetRef.current = clamped;
 
         const progress = clamped / ACTION_WIDTH;
+        const scale = 0.5 + (progress * 0.5);
 
-        // Card follows directly
-        gsap.set(card, { x: -clamped });
+        // Toggle transition for animation
+        if (animate) {
+            card.style.transition = 'transform 0.25s ease-out';
+            editBtn.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
+            deleteBtn.style.transition = 'transform 0.25s ease-out, opacity 0.25s ease-out';
+        } else {
+            card.style.transition = 'none';
+            editBtn.style.transition = 'none';
+            deleteBtn.style.transition = 'none';
+        }
 
-        // Buttons scale based on progress
-        gsap.set(editBtn, {
-            scale: 0.5 + (progress * 0.5),
-            opacity: progress
-        });
-        gsap.set(deleteBtn, {
-            scale: 0.5 + (progress * 0.5),
-            opacity: progress
-        });
-    }, []);
-
-    // Animate to final position with spring bounce
-    const animateToPosition = useCallback((targetOffset: number) => {
-        const card = cardRef.current;
-        const editBtn = editBtnRef.current;
-        const deleteBtn = deleteBtnRef.current;
-
-        if (!card || !editBtn || !deleteBtn) return;
-
-        offsetRef.current = targetOffset;
-        const isOpening = targetOffset > 0;
-
-        // Card animation with spring overshoot
-        gsap.to(card, {
-            x: -targetOffset,
-            duration: 0.6,
-            ease: 'elastic.out(1, 0.5)', // Bouncy spring
-        });
-
-        // Buttons pop in/out
-        gsap.to(editBtn, {
-            scale: isOpening ? 1 : 0.5,
-            opacity: isOpening ? 1 : 0,
-            duration: 0.4,
-            ease: 'back.out(2)',
-        });
-        gsap.to(deleteBtn, {
-            scale: isOpening ? 1 : 0.5,
-            opacity: isOpening ? 1 : 0,
-            duration: 0.4,
-            ease: 'back.out(2)',
-            delay: 0.03,
-        });
+        card.style.transform = `translateX(${-clamped}px)`;
+        editBtn.style.transform = `scale(${scale})`;
+        editBtn.style.opacity = `${progress}`;
+        deleteBtn.style.transform = `scale(${scale})`;
+        deleteBtn.style.opacity = `${progress}`;
     }, []);
 
     // Snap to open or closed
     const snapToPosition = useCallback(() => {
         isDraggingRef.current = false;
         const shouldOpen = offsetRef.current >= ACTION_WIDTH * SNAP_THRESHOLD;
-        setIsOpen(shouldOpen);
-        animateToPosition(shouldOpen ? ACTION_WIDTH : 0);
-    }, [animateToPosition]);
+        const targetOffset = shouldOpen ? ACTION_WIDTH : 0;
 
-    // Kill animations
-    const killAnimations = useCallback(() => {
-        gsap.killTweensOf([cardRef.current, editBtnRef.current, deleteBtnRef.current]);
-    }, []);
+        setIsAnimating(true);
+        updateVisuals(targetOffset, true);
+        setIsOpen(shouldOpen);
+
+        // Clear animating state after transition
+        setTimeout(() => setIsAnimating(false), 250);
+    }, [updateVisuals]);
 
     // Start drag
     const startDrag = useCallback((clientX: number) => {
-        killAnimations();
+        if (isAnimating) return;
         isDraggingRef.current = true;
         startXRef.current = clientX;
         startOffsetRef.current = offsetRef.current;
-    }, [killAnimations]);
+    }, [isAnimating]);
 
     // Update drag
     const updateDrag = useCallback((clientX: number) => {
         if (!isDraggingRef.current) return;
         const diff = startXRef.current - clientX;
-        updateVisuals(startOffsetRef.current + diff);
+        updateVisuals(startOffsetRef.current + diff, false);
     }, [updateVisuals]);
 
     // End drag
@@ -154,18 +124,13 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => updateDrag(e.clientX);
         const handleMouseUp = () => endDrag();
-        const handleMouseLeave = (e: MouseEvent) => {
-            if (e.relatedTarget === null && isDraggingRef.current) endDrag();
-        };
 
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-        document.addEventListener('mouseleave', handleMouseLeave);
 
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
-            document.removeEventListener('mouseleave', handleMouseLeave);
         };
     }, [updateDrag, endDrag]);
 
@@ -174,44 +139,51 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
         const container = containerRef.current;
         if (!container) return;
 
+        let wheelTimeout: ReturnType<typeof setTimeout> | null = null;
+
         const handleWheel = (e: WheelEvent) => {
+            if (isAnimating) return;
             if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 0.5) {
                 e.preventDefault();
-                killAnimations();
 
                 const newOffset = offsetRef.current + (e.deltaX * 0.7);
-                updateVisuals(newOffset);
+                updateVisuals(newOffset, false);
 
-                if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
-                snapTimeoutRef.current = setTimeout(snapToPosition, 120);
+                if (wheelTimeout) clearTimeout(wheelTimeout);
+                wheelTimeout = setTimeout(() => {
+                    snapToPosition();
+                    wheelTimeout = null;
+                }, 80);
             }
         };
 
         container.addEventListener('wheel', handleWheel, { passive: false });
         return () => {
             container.removeEventListener('wheel', handleWheel);
-            if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
+            if (wheelTimeout) clearTimeout(wheelTimeout);
         };
-    }, [killAnimations, updateVisuals, snapToPosition]);
+    }, [isAnimating, updateVisuals, snapToPosition]);
 
     // Close actions
     const closeActions = useCallback(() => {
+        setIsAnimating(true);
+        updateVisuals(0, true);
         setIsOpen(false);
-        animateToPosition(0);
-    }, [animateToPosition]);
+        setTimeout(() => setIsAnimating(false), 250);
+    }, [updateVisuals]);
 
     const handleEdit = (e: React.MouseEvent) => {
         e.stopPropagation();
         const p = person;
         closeActions();
-        setTimeout(() => onEdit(p), 350);
+        setTimeout(() => onEdit(p), 300);
     };
 
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
         const p = person;
         closeActions();
-        setTimeout(() => onDelete(p), 350);
+        setTimeout(() => onDelete(p), 300);
     };
 
     return (
