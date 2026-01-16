@@ -50,8 +50,10 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
         }, 280); // Slightly less than animation duration
     }, [onClose]);
 
-    // Filter and sort people by search query - newest first (by id descending)
-    const filteredPeople = people
+    // Filter people by search query - reverse to show newest first
+    // (backend returns in chronological order, we reverse for reverse-chronological)
+    const filteredPeople = [...people]
+        .reverse()
         .filter(person => {
             const query = searchQuery.toLowerCase();
             return (
@@ -59,10 +61,6 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
                 person.relation?.toLowerCase().includes(query) ||
                 person.context?.toLowerCase().includes(query)
             );
-        })
-        .sort((a, b) => {
-            // Sort by id descending - newer entries have higher/later ids
-            return (b.id || '').localeCompare(a.id || '');
         });
 
     // TTS for person info

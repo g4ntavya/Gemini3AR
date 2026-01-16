@@ -1517,7 +1517,9 @@ body,
   width: min(500px, 90vw);
   max-height: 80vh;
   overflow-y: auto;
-  background: rgba(25, 25, 30, 0.95);
+  background: rgba(30, 30, 35, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -1545,21 +1547,11 @@ body,
 }
 
 .response-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 20px;
-  font-weight: 600;
-  color: #fff;
-  background: linear-gradient(135deg, #4285f4, #9b5de5);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.response-title .gemini-icon {
-  font-size: 24px;
-  -webkit-text-fill-color: initial;
+  font-family: 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: #ffffff;
+  letter-spacing: 0.3px;
 }
 
 .response-actions {
@@ -1770,21 +1762,6 @@ body,
     width: 28px;
     height: 28px;
     font-size: 12px;
-  }
-
-  /* Smaller expanded card */
-  .face-label.expanded .label-content {
-    max-width: 200px;
-  }
-
-  /* Smaller name tag */
-  .minecraft-nametag {
-    transform: translateX(-50%) translateY(-20px);
-  }
-
-  .nametag-text {
-    font-size: 18px;
-    padding: 4px 10px;
   }
 
   /* Smaller status indicator */

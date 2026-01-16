@@ -24,7 +24,7 @@ export function GeminiResponseOverlay({ response, onClose }: GeminiResponseOverl
     // TTS for a specific person
     const speakPerson = (match: MatchedPerson) => {
         window.speechSynthesis.cancel();
-        const text = `${match.person.name}. ${match.person.relation || ''}. ${match.relevance}`;
+        const text = `${match.person.name}. ${match.person.relation || ''}. ${match.person.context || ''}`;
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 1.0;
         window.speechSynthesis.speak(utterance);
@@ -35,10 +35,7 @@ export function GeminiResponseOverlay({ response, onClose }: GeminiResponseOverl
             <div className="gemini-response-card">
                 {/* Header */}
                 <div className="response-header">
-                    <div className="response-title">
-                        <span className="gemini-icon">✨</span>
-                        Gemini
-                    </div>
+                    <div className="response-title">Gemini Insights</div>
                     <div className="response-actions">
                         {/* TTS Button */}
                         <button
@@ -75,7 +72,10 @@ export function GeminiResponseOverlay({ response, onClose }: GeminiResponseOverl
                                     {match.person.relation && (
                                         <div className="match-relation">{match.person.relation}</div>
                                     )}
-                                    <div className="match-relevance">{match.relevance}</div>
+                                    {/* Show stored context instead of Gemini's relevance */}
+                                    {match.person.context && (
+                                        <div className="match-context">{match.person.context}</div>
+                                    )}
                                 </div>
                                 {/* TTS for this person */}
                                 <button
