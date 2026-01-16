@@ -1,10 +1,10 @@
 /**
  * Face detection hook - Cross-browser compatible
  * 
- * Strategy:
- * 1. Try native Shape Detection API (Chrome/Edge experimental)
- * 2. Fall back to MediaPipe (Chrome, most browsers)
- * 3. For Safari: Provide visual feedback that face detection is limited
+ * Performance optimizations:
+ * - Uses setInterval instead of requestAnimationFrame (reduces CPU/GPU)
+ * - Pauses when tab is hidden (visibility API)
+ * - Throttled detection to reduce GPU load
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -17,8 +17,8 @@ const LERP_FACTOR = 0.3;
 // How long a face can be missing before it's removed (ms)
 const FACE_TIMEOUT = 500;
 
-// Detection interval (ms)
-const DETECTION_INTERVAL = 150;
+// Detection interval (ms) - increased for better performance
+const DETECTION_INTERVAL = 200;
 
 interface UseFaceDetectionReturn {
     faces: Map<string, TrackedFace>;
@@ -40,8 +40,6 @@ export function useFaceDetection(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const detectorRef = useRef<any>(null);
     const detectorTypeRef = useRef<'native' | 'mediapipe' | 'none'>('none');
-    const animationFrameRef = useRef<number>();
-    const lastDetectionRef = useRef<number>(0);
     const facesRef = useRef<Map<string, TrackedFace>>(new Map());
     const isProcessingRef = useRef(false);
 
@@ -187,65 +185,86 @@ export function useFaceDetection(
 
         return () => {
             mounted = false;
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
     }, [updateFaces]);
 
-    // Detection loop
+    // Detection function (called by interval)
     const detect = useCallback(async () => {
         const video = videoRef.current;
         const detector = detectorRef.current;
         const detectorType = detectorTypeRef.current;
 
-        // Skip if no video or detector
-        if (!video || video.readyState < 2 || !video.videoWidth) {
-            animationFrameRef.current = requestAnimationFrame(detect);
+        // Skip if no video, detector, or already processing
+        if (!video || video.readyState < 2 || !video.videoWidth || isProcessingRef.current) {
             return;
         }
 
-        const now = Date.now();
+        if (detector && detectorType !== 'none') {
+            isProcessingRef.current = true;
+            const now = Date.now();
 
-        // Throttle and prevent stacking
-        if (now - lastDetectionRef.current >= DETECTION_INTERVAL && !isProcessingRef.current) {
-            if (detector && detectorType !== 'none') {
-                isProcessingRef.current = true;
-                lastDetectionRef.current = now;
-
-                try {
-                    if (detectorType === 'native') {
-                        // Native FaceDetector API
-                        const detected = await detector.detect(video);
-                        const detections: BoundingBox[] = detected.map(
-                            (face: { boundingBox: DOMRectReadOnly }) => ({
-                                x: face.boundingBox.x / video.videoWidth,
-                                y: face.boundingBox.y / video.videoHeight,
-                                width: face.boundingBox.width / video.videoWidth,
-                                height: face.boundingBox.height / video.videoHeight,
-                            })
-                        );
-                        updateFaces(detections, now);
-                    } else if (detectorType === 'mediapipe') {
-                        // MediaPipe - results come via callback
-                        await detector.send({ image: video });
-                    }
-                } catch (e) {
-                    console.error('[FaceDetection] Detection error:', e);
-                    isProcessingRef.current = false;
+            try {
+                if (detectorType === 'native') {
+                    // Native FaceDetector API
+                    const detected = await detector.detect(video);
+                    const detections: BoundingBox[] = detected.map(
+                        (face: { boundingBox: DOMRectReadOnly }) => ({
+                            x: face.boundingBox.x / video.videoWidth,
+                            y: face.boundingBox.y / video.videoHeight,
+                            width: face.boundingBox.width / video.videoWidth,
+                            height: face.boundingBox.height / video.videoHeight,
+                        })
+                    );
+                    updateFaces(detections, now);
+                } else if (detectorType === 'mediapipe') {
+                    // MediaPipe - results come via callback
+                    await detector.send({ image: video });
                 }
+            } catch (e) {
+                console.error('[FaceDetection] Detection error:', e);
+                isProcessingRef.current = false;
             }
         }
-
-        animationFrameRef.current = requestAnimationFrame(detect);
     }, [videoRef, updateFaces]);
 
-    // Start detection loop
+    // Start/stop detection based on visibility and model status
     useEffect(() => {
-        if (isModelLoaded) {
-            console.log('[FaceDetection] Starting detection loop');
-            detect();
+        let intervalId: ReturnType<typeof setInterval> | null = null;
+
+        const startDetection = () => {
+            if (!intervalId && isModelLoaded) {
+                console.log('[FaceDetection] Starting detection (interval mode)');
+                intervalId = setInterval(detect, DETECTION_INTERVAL);
+            }
+        };
+
+        const stopDetection = () => {
+            if (intervalId) {
+                console.log('[FaceDetection] Pausing detection');
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+        };
+
+        // Handle visibility changes - pause when tab is hidden
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                stopDetection();
+            } else {
+                startDetection();
+            }
+        };
+
+        // Start if model is loaded and tab is visible
+        if (isModelLoaded && !document.hidden) {
+            startDetection();
         }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
         return () => {
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+            stopDetection();
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
     }, [isModelLoaded, detect]);
 
