@@ -1,6 +1,6 @@
 """
 Gemini Speech-to-Text + Extraction Service
-==========================================
+"""
 
 import base64
 import json

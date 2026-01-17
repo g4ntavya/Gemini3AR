@@ -11,7 +11,7 @@ RemindAR uses your webcam to detect faces, recognize identities, and display con
 **How it works:**
 - Face detection runs in the browser using MediaPipe
 - Face recognition uses InsightFace embeddings on the backend
-- **Gemini 3.0 preview** for voice input transcription, extraction, and context queries
+- **Gemini 3.0 flash** for voice input transcription, extraction, and context queries
 - Native **Hindi/Hinglish** support for multilingual users
 - Data syncs between local SQLite and Firebase Firestore
 
@@ -72,7 +72,7 @@ Open `https://localhost:5173` and allow camera access.
 - **Hover-activated blur box**: Appears on hover (desktop) or tap (mobile)
 - **Auto-fade**: Box fades after 3 seconds of inactivity
 
-### Voice Registration (Gemini 3.0 preview)
+### Voice Registration (Gemini 3.0 flash)
 - Speak naturally in your language
 - Gemini transcribes + extracts structured data in ONE call
 - Supports English, Hindi, and Hinglish!
@@ -118,7 +118,7 @@ Frontend (React + TypeScript + Vite)
 
 Backend (FastAPI + Python)
 ├── InsightFace recognition
-├── Gemini 3.0 preview (transcription + extraction + queries)
+├── Gemini 3.0 flash (transcription + extraction + queries)
 └── SQLite + Firebase storage
 ```
 
@@ -126,11 +126,11 @@ Backend (FastAPI + Python)
 
 ```
 Voice Registration:
-User speaks → Gemini 3.0 preview → { transcription, name, relation, context }
+User speaks → Gemini 3.0 flash → { transcription, name, relation, context }
                  (single API call)
 
 Context Queries:
-User asks → Gemini 3.0 preview → { answer, matched people }
+User asks → Gemini 3.0 flash → { answer, matched people }
                  (searches your database)
                  
 Benefits:
@@ -216,7 +216,7 @@ Ensure your phone is on the same network. Use the Vite proxy (requests go throug
 - **Frontend**: React, TypeScript, Vite, GSAP
 - **Detection**: MediaPipe Face Detection
 - **Recognition**: InsightFace
-- **AI**: Gemini 3.0 preview (transcription, extraction, queries)
+- **AI**: Gemini 3.0 flash (transcription, extraction, queries)
 - **Storage**: Firebase Firestore, SQLite
 - **Fonts**: Rozha One, Helvetica Neue
 
