@@ -601,8 +601,10 @@ async def create_person(person: PersonCreate):
     sync_person_to_firebase(created_person)
     
     # Broadcast to all clients for real-time update
+    # NOTE: Use person_created, NOT person_registered
+    # person_registered is sent by register-face AFTER embedding is ready
     await broadcast_to_all({
-        "type": "person_registered",
+        "type": "person_created",
         "data": created_person
     })
     
