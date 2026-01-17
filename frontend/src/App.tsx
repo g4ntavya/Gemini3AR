@@ -18,7 +18,7 @@ import { cropFaceFromVideo } from './utils/faceUtils';
 import { Person } from './types';
 import { API } from './config/api';
 
-// Recognition settings - FAST for real-time feel
+// Recognition settings 
 const RECOGNITION_INTERVAL = 200; // Faster recognition (was 500)
 const BURST_DELAY = 50; // For burst recognition after visibility change
 
@@ -46,8 +46,13 @@ function App() {
     const lastSendTimeRef = useRef<Map<string, number>>(new Map());
     const burstModeRef = useRef(false);
 
-    // Hooks
-    const { status: wsStatus, sendFaceData, results, clearResult, clearAllResults } = useWebSocket();
+    // Hooks - onDataChange clears send times for immediate re-recognition
+    const { status: wsStatus, sendFaceData, results, clearResult, clearAllResults } = useWebSocket({
+        onDataChange: () => {
+            console.log('[App] Data changed, clearing send times for re-recognition');
+            lastSendTimeRef.current.clear();
+        }
+    });
     const { faces, isModelLoaded, error: detectionError } = useFaceDetection(videoRef);
 
     // Update dimensions
@@ -180,6 +185,14 @@ function App() {
         setCameraError(error);
     }, []);
 
+    // Ensure video is playing (browser may pause it during dialogs)
+    const resumeVideoPlayback = useCallback(() => {
+        if (videoRef.current && videoRef.current.paused) {
+            console.log('[App] Resuming video playback');
+            videoRef.current.play().catch(e => console.error('[App] Video resume failed:', e));
+        }
+    }, []);
+
     // Open modal for NEW person
     const handleAddPerson = useCallback((trackId: string) => {
         const face = faces.get(trackId);
@@ -263,8 +276,10 @@ function App() {
                 if (!createRes.ok) throw new Error('Failed to create person');
                 const person = await createRes.json();
 
+                // Register face embedding
                 if (data.faceImageBase64) {
-                    await fetch(API.registerFace(person.id), {
+                    console.log('[App] Registering face for:', person.id);
+                    const faceRes = await fetch(API.registerFace(person.id), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -272,6 +287,16 @@ function App() {
                             image_base64: data.faceImageBase64,
                         }),
                     });
+
+                    if (!faceRes.ok) {
+                        console.error('[App] Face registration failed:', await faceRes.text());
+                        alert('Person created but face registration failed. Please try again.');
+                    } else {
+                        console.log('[App] Face registered successfully');
+                    }
+                } else {
+                    console.warn('[App] No face image captured - person created without face embedding');
+                    alert('Warning: No face image was captured. Person created but cannot be recognized.');
                 }
 
                 // Clear result to force re-recognition
@@ -369,13 +394,19 @@ function App() {
             {/* Dashboard Sidebar */}
             <DashboardSidebar
                 isOpen={sidebarOpen}
-                onClose={() => setSidebarOpen(false)}
+                onClose={() => {
+                    setSidebarOpen(false);
+                    resumeVideoPlayback();
+                }}
             />
 
             {/* Gemini Response Overlay */}
             <GeminiResponseOverlay
                 response={geminiResponse}
-                onClose={() => setGeminiResponse(null)}
+                onClose={() => {
+                    setGeminiResponse(null);
+                    resumeVideoPlayback();
+                }}
             />
 
             <RegistrationModal
@@ -383,7 +414,15 @@ function App() {
                 trackId={modalTrackId}
                 faceImageBase64={modalFaceImage}
                 existingPerson={editingPerson}
-                onClose={() => setShowModal(false)}
+                onClose={() => {
+                    setShowModal(false);
+                    // Clear all results to force fresh recognition
+                    clearAllResults();
+                    // Reset send times to allow immediate re-recognition
+                    lastSendTimeRef.current.clear();
+                    // Resume video in case it was paused
+                    resumeVideoPlayback();
+                }}
                 onSubmit={handleModalSubmit}
             />
         </div>

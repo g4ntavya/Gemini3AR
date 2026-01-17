@@ -224,8 +224,3 @@ def get_all_people_from_firebase(timeout_seconds: float = 10.0) -> List[Dict[str
     except Exception as e:
         print(f"[Firebase] Fetch error: {e}")
         return []
-        return people
-        
-    except Exception as e:
-        print(f"[Firebase] Fetch error: {e}")
-        return []

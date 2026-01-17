@@ -13,6 +13,10 @@ import { WS_URL } from '../config/api';
 
 const HEARTBEAT_INTERVAL = 15000;
 
+interface UseWebSocketOptions {
+    onDataChange?: () => void;  // Called when person data changes
+}
+
 interface UseWebSocketReturn {
     status: ConnectionStatus;
     sendFaceData: (data: FaceData) => void;
@@ -21,7 +25,8 @@ interface UseWebSocketReturn {
     clearAllResults: () => void;
 }
 
-export function useWebSocket(): UseWebSocketReturn {
+export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
+    const { onDataChange } = options;
     const [status, setStatus] = useState<ConnectionStatus>('connecting');
 
     // KEY FIX: Use useState for results so React tracks changes
@@ -85,21 +90,23 @@ export function useWebSocket(): UseWebSocketReturn {
                         });
                     }
 
-                    // Person registered - clear results and wait briefly for cache update
+                    // Person registered - clear results and notify for immediate re-recognition
                     if (message.type === 'person_registered' && message.data) {
                         console.log('[WS] Person registered:', message.data.name);
-                        // Clear all results to force fresh recognition with new embedding
                         setResults(new Map());
+                        onDataChange?.();  // Notify to clear send times
                     }
 
                     if (message.type === 'person_updated' && message.data) {
                         console.log('[WS] Person updated:', message.data.name);
                         setResults(new Map());
+                        onDataChange?.();
                     }
 
                     if (message.type === 'person_deleted' && message.data) {
                         console.log('[WS] Person deleted:', message.data.id);
                         setResults(new Map());
+                        onDataChange?.();
                     }
                 } catch (e) {
                     console.error('[WS] Parse error:', e);

@@ -73,27 +73,35 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
     }, []);
 
     // Edit person
-    const handleEdit = useCallback((person: Person) => {
+    const handleEdit = useCallback(async (person: Person) => {
         const newName = prompt('Edit name:', person.name);
         if (newName === null) return;
 
         const newRelation = prompt('Edit relation:', person.relation || '');
         const newContext = prompt('Edit context:', person.context || '');
 
-        fetch(`${API.people}/${person.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: newName || person.name,
-                relation: newRelation || person.relation,
-                context: newContext || person.context,
-                last_met: person.last_met
-            })
-        }).then(res => {
+        try {
+            const res = await fetch(`${API.people}/${person.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: newName || person.name,
+                    relation: newRelation || person.relation,
+                    context: newContext || person.context,
+                    last_met: person.last_met
+                })
+            });
             if (res.ok) {
-                fetchPeople();
+                // Update local state immediately
+                setPeople(prev => prev.map(p =>
+                    p.id === person.id
+                        ? { ...p, name: newName || p.name, relation: newRelation || p.relation, context: newContext || p.context }
+                        : p
+                ));
             }
-        }).catch(err => console.error('[Dashboard] Edit failed:', err));
+        } catch (err) {
+            console.error('[Dashboard] Edit failed:', err);
+        }
     }, []);
 
     // Delete person
