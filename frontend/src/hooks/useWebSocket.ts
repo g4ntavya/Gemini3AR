@@ -15,6 +15,7 @@ const HEARTBEAT_INTERVAL = 15000;
 
 interface UseWebSocketOptions {
     onDataChange?: () => void;  // Called when person data changes
+    enabled?: boolean; // Whether to connect to WebSocket
 }
 
 interface UseWebSocketReturn {
@@ -26,8 +27,8 @@ interface UseWebSocketReturn {
 }
 
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
-    const { onDataChange } = options;
-    const [status, setStatus] = useState<ConnectionStatus>('connecting');
+    const { onDataChange, enabled = true } = options;
+    const [status, setStatus] = useState<ConnectionStatus>('disconnected');
 
     // KEY FIX: Use useState for results so React tracks changes
     const [results, setResults] = useState<Map<string, RecognitionResult>>(new Map());
@@ -38,7 +39,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     const mountedRef = useRef(true);
 
     const connect = useCallback(() => {
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || !enabled) return;
         if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
         console.log('[WS] Connecting...');
@@ -65,7 +66,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
                 if (heartbeatRef.current) clearInterval(heartbeatRef.current);
                 if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
 
-                if (mountedRef.current) {
+                if (mountedRef.current && enabled) {
                     console.log('[WS] Reconnecting in 2s...');
                     reconnectTimeoutRef.current = setTimeout(connect, 2000);
                 }
@@ -118,7 +119,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
             console.error('[WS] Connection error:', error);
             setStatus('disconnected');
         }
-    }, []);
+    }, [enabled, onDataChange]);
 
     const sendFaceData = useCallback((data: FaceData) => {
         if (wsRef.current?.readyState !== WebSocket.OPEN) return;
@@ -148,7 +149,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
     useEffect(() => {
         mountedRef.current = true;
-        connect();
+        if (enabled) {
+            connect();
+        }
 
         return () => {
             mountedRef.current = false;
@@ -159,7 +162,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
                 wsRef.current = null;
             }
         };
-    }, [connect]);
+    }, [connect, enabled]);
 
     return {
         status,

@@ -51,7 +51,8 @@ function App() {
         onDataChange: () => {
             console.log('[App] Data changed, clearing send times for re-recognition');
             lastSendTimeRef.current.clear();
-        }
+        },
+        enabled: isDemoActive // Only connect when demo is active to prevent errors on landing page
     });
     const { faces, isModelLoaded, error: detectionError } = useFaceDetection(videoRef);
 
