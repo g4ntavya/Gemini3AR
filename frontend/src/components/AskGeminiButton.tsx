@@ -32,6 +32,8 @@ export function AskGeminiButton({ onResponse }: AskGeminiButtonProps) {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
 
+    const startTimeRef = useRef<number>(0);
+
     const startRecording = useCallback(async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -48,20 +50,28 @@ export function AskGeminiButton({ onResponse }: AskGeminiButtonProps) {
             };
 
             mediaRecorder.onstop = async () => {
+                const duration = Date.now() - startTimeRef.current;
                 setIsRecording(false);
-                setIsProcessing(true);
 
                 // Stop all tracks
                 stream.getTracks().forEach(track => track.stop());
 
-                // Create blob and send to API
+                // Create blob
                 const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+
+                // VALIDATION: Don't send if too short or empty
+                if (duration < 500 || audioBlob.size === 0) {
+                    console.log('[AskGemini] Recording too short or empty, cancelling send.');
+                    return;
+                }
+
+                setIsProcessing(true);
 
                 try {
                     const formData = new FormData();
                     formData.append('audio', audioBlob, 'query.webm');
 
-                    console.log('[AskGemini] Sending query...');
+                    console.log(`[AskGemini] Sending query... (${audioBlob.size} bytes, ${duration}ms)`);
                     const res = await fetch(API.askGemini, {
                         method: 'POST',
                         body: formData,
@@ -83,6 +93,7 @@ export function AskGeminiButton({ onResponse }: AskGeminiButtonProps) {
 
             mediaRecorder.start();
             mediaRecorderRef.current = mediaRecorder;
+            startTimeRef.current = Date.now();
             setIsRecording(true);
             console.log('[AskGemini] Recording started...');
 
