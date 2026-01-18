@@ -38,6 +38,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
     const heartbeatRef = useRef<ReturnType<typeof setInterval>>();
     const mountedRef = useRef(true);
 
+    // Use ref for callback to avoid effect dependencies
+    const onDataChangeRef = useRef(onDataChange);
+    useEffect(() => {
+        onDataChangeRef.current = onDataChange;
+    }, [onDataChange]);
+
     const connect = useCallback(() => {
         if (!mountedRef.current || !enabled) return;
         if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -95,19 +101,19 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
                     if (message.type === 'person_registered' && message.data) {
                         console.log('[WS] Person registered:', message.data.name);
                         setResults(new Map());
-                        onDataChange?.();  // Notify to clear send times
+                        onDataChangeRef.current?.();  // Notify to clear send times
                     }
 
                     if (message.type === 'person_updated' && message.data) {
                         console.log('[WS] Person updated:', message.data.name);
                         setResults(new Map());
-                        onDataChange?.();
+                        onDataChangeRef.current?.();
                     }
 
                     if (message.type === 'person_deleted' && message.data) {
                         console.log('[WS] Person deleted:', message.data.id);
                         setResults(new Map());
-                        onDataChange?.();
+                        onDataChangeRef.current?.();
                     }
                 } catch (e) {
                     console.error('[WS] Parse error:', e);
@@ -119,7 +125,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
             console.error('[WS] Connection error:', error);
             setStatus('disconnected');
         }
-    }, [enabled, onDataChange]);
+    }, [enabled]); // Removes onDataChange from dependency
 
     const sendFaceData = useCallback((data: FaceData) => {
         if (wsRef.current?.readyState !== WebSocket.OPEN) return;

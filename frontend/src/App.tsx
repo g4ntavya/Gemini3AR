@@ -47,11 +47,13 @@ function App() {
     const burstModeRef = useRef(false);
 
     // Hooks - onDataChange clears send times for immediate re-recognition
+    const handleDataChange = useCallback(() => {
+        console.log('[App] Data changed, clearing send times for re-recognition');
+        lastSendTimeRef.current.clear();
+    }, []);
+
     const { status: wsStatus, sendFaceData, results, clearResult, clearAllResults } = useWebSocket({
-        onDataChange: () => {
-            console.log('[App] Data changed, clearing send times for re-recognition');
-            lastSendTimeRef.current.clear();
-        },
+        onDataChange: handleDataChange,
         enabled: isDemoActive // Only connect when demo is active to prevent errors on landing page
     });
     const { faces, isModelLoaded, error: detectionError } = useFaceDetection(videoRef);
