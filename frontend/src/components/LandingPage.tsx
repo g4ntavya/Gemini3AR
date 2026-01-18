@@ -213,22 +213,20 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
             ease: 'power2.out'
         }, 0.45);
 
-        // Animate the Try Demo button with cool reveal after scroll completes
         const tryDemoButton = tryDemoButtonRef.current;
         if (tryDemoButton) {
             gsap.set(tryDemoButton, {
-                scale: 0,
                 opacity: 0,
-                y: 20
+                y: 10 // Subtle slide only
             });
 
+            // Fast simple fade in
             tl.to(tryDemoButton, {
-                scale: 1,
                 opacity: 1,
                 y: 0,
-                duration: 0.3,
-                ease: 'back.out(1.7)'
-            }, 0.75);
+                duration: 0.1, // Very fast relative to scroll
+                ease: 'power1.out'
+            }, 0.6); // Start earlier
         }
 
         return () => {
