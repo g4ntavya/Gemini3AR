@@ -1,3 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rozha+One&display=swap');
+
 /**
  * RemindAR - Global Styles
  * Clean, minimal, award-winning design
@@ -8,10 +12,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Font imports must be first */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;500&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Rozha+One&display=swap');
+/* Font imports must be first - MOVED TO TOP */
 
 /* Helvetica Neue - Local fonts */
 @font-face {

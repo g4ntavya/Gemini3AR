@@ -162,7 +162,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
 
         gsap.set(leftText, {
             yPercent: -50,
-            scale: 0.69,
+            scale: 0.79,
             transformOrigin: 'left center'
         });
 
@@ -176,7 +176,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         });
 
         gsap.set(content, {
-            scale: isMobileView ? 0.25 : 0.35,
+            scale: isMobileView ? 0.35 : 0.45,
             rotation: isMobileView ? 90 : 0,
             opacity: 1,
             transformOrigin: 'center center'
@@ -438,15 +438,15 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                             {/* Left Side - Title (RemindAR) */}
                             <div
                                 ref={leftTextRef}
-                                className="absolute left-0 top-1/2 flex flex-col z-20"
+                                className="absolute left-0 top-1/2 flex flex-col z-40"
                                 style={{
-                                    transform: 'translateY(-50%) scale(0.69)',
+                                    transform: 'translateY(-50%) scale(0.79)',
                                     transformOrigin: 'left center',
                                     transformStyle: 'preserve-3d'
                                 }}
                             >
                                 <span
-                                    className="italic text-sm sm:text-base md:text-lg lg:text-xl"
+                                    className="italic text-base sm:text-lg md:text-xl lg:text-2xl"
                                     style={{ fontFamily: 'Mileast', color: '#9E6B30' }}
                                 >
                                     THIS IS
@@ -491,7 +491,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 ref={contentRef}
                                 className="absolute inset-0 flex items-center justify-center z-30"
                                 style={{
-                                    transform: isMobile ? 'scale(0.25) rotate(90deg)' : 'scale(0.35)',
+                                    transform: isMobile ? 'scale(0.35) rotate(90deg)' : 'scale(0.45)',
                                     opacity: 1,
                                     transformOrigin: 'center center'
                                 }}
@@ -592,7 +592,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 style={{ transform: 'translateY(-50%) scale(1.3)', transformOrigin: 'right center' }}
                             >
                                 <p
-                                    className="text-white text-xs sm:text-sm md:text-base leading-relaxed"
+                                    className="text-white text-sm sm:text-base md:text-lg leading-relaxed"
                                     style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
                                 >
                                     For the faces you'd have<br />
@@ -606,7 +606,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         <div className="pb-4 md:pb-8">
                             <p
                                 ref={bottomTextRef}
-                                className="text-white text-center text-sm sm:text-base md:text-lg max-w-2xl mx-auto leading-relaxed"
+                                className="text-white text-center text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed"
                                 style={{ fontFamily: 'HelveticaNeue-UltraLight', transform: 'scale(1.5)' }}
                             >
                                 Gemini powered assistant that helps people with memory challenges recognize loved ones and recall meaningful context.
