@@ -17,6 +17,20 @@ RemindAR uses your webcam to detect faces, recognize identities, and display con
 
 ---
 
+## Screenshots
+
+![Main camera view with face detection](md/Screenshot%202026-02-08%20at%202.40.49%20PM.png)
+
+![Face label overlay](md/Screenshot%202026-02-08%20at%202.40.58%20PM.png)
+
+![Voice registration](md/Screenshot%202026-02-08%20at%202.41.05%20PM.png)
+
+![Person details](md/Screenshot%202026-02-08%20at%202.41.09%20PM.png)
+
+![Dashboard sidebar](md/Screenshot%202026-02-08%20at%202.42.07%20PM.png)
+
+---
+
 ## Getting Started
 
 ### Requirements
