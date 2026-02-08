@@ -15,7 +15,8 @@ import { lerpBoundingBox, matchFaces } from '../utils/faceUtils';
 const LERP_FACTOR = 0.3;
 
 // How long a face can be missing before it's removed (ms)
-const FACE_TIMEOUT = 500;
+// Increased to 1500ms to bridge short occlusions (covering face, looking away)
+const FACE_TIMEOUT = 1500;
 
 // Detection interval (ms) - increased for better performance
 const DETECTION_INTERVAL = 200;

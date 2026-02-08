@@ -117,6 +117,23 @@ function App() {
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [cameraReady, wsStatus, sendAllFacesNow]);
 
+    // Clear stale results when all faces disappear
+    // This ensures fresh recognition when faces return to frame
+    const prevVisibleCountRef = useRef(0);
+    useEffect(() => {
+        const visibleFaces = Array.from(faces.values()).filter(f => f.isVisible);
+        const currentCount = visibleFaces.length;
+
+        // When faces go from some to none, clear everything for fresh start
+        if (prevVisibleCountRef.current > 0 && currentCount === 0) {
+            console.log('[App] All faces left frame - clearing stale results for fresh recognition');
+            clearAllResults();
+            lastSendTimeRef.current.clear();
+        }
+
+        prevVisibleCountRef.current = currentCount;
+    }, [faces, clearAllResults]);
+
     // Immediately recognize NEW faces (those without results yet)
     useEffect(() => {
         if (!videoRef.current || wsStatus !== 'connected') return;
