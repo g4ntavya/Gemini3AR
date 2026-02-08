@@ -18,6 +18,7 @@ class Person(BaseModel):
     relation: str
     last_met: str
     context: str
+    face_image: Optional[str] = None  # Base64-encoded face thumbnail from registration
     
     class Config:
         from_attributes = True

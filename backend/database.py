@@ -43,10 +43,18 @@ def init_database():
             last_met TEXT NOT NULL,
             context TEXT NOT NULL,
             embedding TEXT,
+            face_image TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # Migration: Add face_image column if it doesn't exist (for existing databases)
+    cursor.execute("PRAGMA table_info(people)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if 'face_image' not in columns:
+        cursor.execute("ALTER TABLE people ADD COLUMN face_image TEXT")
+        print("[DB] Added face_image column to existing table")
     
     # Index for faster name lookups
     cursor.execute("""
@@ -63,7 +71,8 @@ def add_person(
     relation: str,
     last_met: str,
     context: str,
-    embedding: Optional[np.ndarray] = None
+    embedding: Optional[np.ndarray] = None,
+    face_image: Optional[str] = None
 ) -> bool:
     """
     Add a new person to the database.
@@ -79,9 +88,9 @@ def add_person(
     
     try:
         cursor.execute("""
-            INSERT INTO people (id, name, relation, last_met, context, embedding)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (person_id, name, relation, last_met, context, embedding_json))
+            INSERT INTO people (id, name, relation, last_met, context, embedding, face_image)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (person_id, name, relation, last_met, context, embedding_json, face_image))
         conn.commit()
         print(f"[DB] Added person: {name} ({person_id})")
         return True
@@ -135,6 +144,25 @@ def update_embedding(person_id: str, embedding: np.ndarray) -> bool:
     return success
 
 
+def update_face_image(person_id: str, face_image: str) -> bool:
+    """Update the face image for a person (base64 encoded)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        UPDATE people 
+        SET face_image = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (face_image, person_id))
+    
+    success = cursor.rowcount > 0
+    conn.commit()
+    
+    if success:
+        print(f"[DB] Updated face_image for: {person_id}")
+    return success
+
+
 def get_person(person_id: str) -> Optional[dict]:
     """Get a person by ID."""
     conn = get_connection()
@@ -178,7 +206,7 @@ def get_all_people() -> List[dict]:
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT id, name, relation, last_met, context FROM people")
+    cursor.execute("SELECT id, name, relation, last_met, context, face_image FROM people")
     return [dict(row) for row in cursor.fetchall()]
 
 
@@ -276,15 +304,16 @@ def sync_from_firestore(firestore_people: list):
             embedding_json = json.dumps(person["embedding"])
         
         cursor.execute("""
-            INSERT OR REPLACE INTO people (id, name, relation, last_met, context, embedding)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO people (id, name, relation, last_met, context, embedding, face_image)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
             person_id,
             person.get("name", ""),
             person.get("relation", ""),
             person.get("last_met", ""),
             person.get("context", ""),
-            embedding_json
+            embedding_json,
+            person.get("face_image", None)
         ))
         synced += 1
     

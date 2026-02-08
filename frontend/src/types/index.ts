@@ -27,6 +27,7 @@ export interface Person {
     relation: string;
     last_met: string;
     context: string;
+    face_image?: string;  // Base64-encoded face thumbnail from registration
 }
 
 // Recognition result from backend
