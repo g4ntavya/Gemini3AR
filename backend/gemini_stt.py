@@ -42,20 +42,30 @@ async def transcribe_and_extract_with_gemini(
         return TranscriptionResult(text="", success=False)
     
     # Build prompt for transcription + extraction
-    prompt = """Listen to this audio and do TWO things:
+    prompt = """Listen to this audio carefully and do TWO things:
 
-1. TRANSCRIBE: Write exactly what was said (in the original language)
-2. EXTRACT: From the transcription, extract these fields if mentioned:
-   - name: The name of the person being talked about
-   - relation: Their relationship (Friend, Family, Doctor, Colleague, Neighbor, etc.)
-   - context: A brief context/memory about them (max 10 words)
+1. TRANSCRIBE: Write EXACTLY what was said. 
+   - If Hindi/Hinglish, write in ROMAN LETTERS (not Devanagari)
+   - Example: "Yeh mera bhai / @dost Rahul hai" NOT "यह मेरा भाई राहुल है"
+   - Preserve the original language mixing (English+Hindi words together)
 
-The audio may be in English, Hindi, or a mix (Hinglish). 
-If Hindi, still extract the fields in ENGLISH.
+2. EXTRACT: From the transcription, find these fields if mentioned:
+   - name: The person's name being talked about (proper noun)
+   - relation: Their relationship (Friend, Family, Brother, Sister, Doctor, Colleague, Neighbor, etc.)
+   - context: A brief memory/fact about them (max 10 words)
 
-Respond ONLY with this JSON format:
+EXAMPLES:
+- Audio: "Yeh mera college friend Arjun hai" → name="Arjun", relation="Friend", context="college friend"
+- Audio: "This is my sister Priya, she lives in Delhi" → name="Priya", relation="Sister", context="lives in Delhi"
+- Audio: "Amit bhai doctor hai" → name="Amit", relation="Brother", context="is a doctor"
+
+IMPORTANT: 
+- Transcribe Hindi words phonetically in Roman script
+- Extract fields in ENGLISH even if audio is in Hindi
+
+Respond ONLY with this JSON (no markdown):
 {
-  "transcription": "exact words spoken",
+  "transcription": "exact words in romanized form",
   "language": "en" or "hi" or "hinglish",
   "name": "extracted name or null",
   "relation": "extracted relation or null",

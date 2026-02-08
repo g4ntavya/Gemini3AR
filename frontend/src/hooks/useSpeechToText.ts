@@ -70,9 +70,43 @@ export function useSpeechToText() {
         dispatch({ type: 'START_RECORDING' });
 
         try {
+            // Try to find a suitable microphone that's NOT from an external camera
+            // This prevents issues where camera reinitialization kills the audio track
+            let audioConstraints: MediaTrackConstraints = {
+                channelCount: 1,
+                sampleRate: { ideal: 16000 },
+                echoCancellation: true,
+                noiseSuppression: true,
+            };
+
+            // Try to get audio devices and find a built-in mic
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const audioInputs = devices.filter(d => d.kind === 'audioinput');
+
+                console.log('[STT] Available audio devices:', audioInputs.map(d => d.label));
+
+                // Look for built-in microphone (avoid external camera mics)
+                const builtInMic = audioInputs.find(d =>
+                    d.label.toLowerCase().includes('built-in') ||
+                    d.label.toLowerCase().includes('internal') ||
+                    d.label.toLowerCase().includes('macbook') ||
+                    d.deviceId === 'default'
+                );
+
+                if (builtInMic && builtInMic.deviceId) {
+                    console.log('[STT] Using built-in mic:', builtInMic.label);
+                    audioConstraints.deviceId = { exact: builtInMic.deviceId };
+                }
+            } catch (enumErr) {
+                console.log('[STT] Could not enumerate devices, using default audio');
+            }
+
             const stream = await navigator.mediaDevices.getUserMedia({
-                audio: { channelCount: 1, sampleRate: 16000 }
+                audio: audioConstraints
             });
+
+            console.log('[STT] Got audio stream, tracks:', stream.getAudioTracks().map(t => t.label));
 
             const mimeType = MediaRecorder.isTypeSupported('audio/webm')
                 ? 'audio/webm'
@@ -80,44 +114,85 @@ export function useSpeechToText() {
 
             const mediaRecorder = new MediaRecorder(stream, { mimeType });
 
+            // Handle track ending unexpectedly (capture failure, device disconnect, etc.)
+            stream.getAudioTracks().forEach(track => {
+                track.onended = () => {
+                    console.warn('[STT] Audio track ended unexpectedly');
+                    // If we have data, still try to process it
+                    if (chunksRef.current.length > 0 && mediaRecorder.state !== 'inactive') {
+                        console.log('[STT] Stopping recorder due to track end, will process existing data');
+                        try {
+                            mediaRecorder.stop();
+                        } catch {
+                            // Ignore errors when stopping
+                        }
+                    } else {
+                        dispatch({ type: 'SET_ERROR', value: 'Microphone disconnected' });
+                        dispatch({ type: 'STOP_RECORDING' });
+                    }
+                };
+            });
+
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data.size > 0) chunksRef.current.push(e.data);
             };
 
             mediaRecorderRef.current = mediaRecorder;
             mediaRecorder.start(500); // Smaller chunks
-            console.log('[STT] Recording...');
+            console.log('[STT] Recording started');
         } catch (err) {
             console.error('[STT] Mic error:', err);
             dispatch({ type: 'SET_ERROR', value: 'Microphone access failed' });
+            dispatch({ type: 'STOP_RECORDING' });
         }
     }, []);
 
     const stopRecording = useCallback(async (): Promise<ExtractedInfo | null> => {
+        const mediaRecorder = mediaRecorderRef.current;
+
+        console.log('[STT] stopRecording called, recorder state:', mediaRecorder?.state);
+
+        // Immediately update UI to show we're stopping
+        dispatch({ type: 'STOP_RECORDING' });
+
+        if (!mediaRecorder) {
+            console.log('[STT] No media recorder available');
+            return null;
+        }
+
+        if (mediaRecorder.state === 'inactive') {
+            console.log('[STT] Recorder already inactive');
+            return null;
+        }
+
+        // Show processing state immediately 
+        dispatch({ type: 'SET_PROCESSING', value: true });
+        console.log('[STT] Set processing state, stopping recorder...');
+
         return new Promise((resolve) => {
-            const mediaRecorder = mediaRecorderRef.current;
-
-            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-                resolve(null);
-                return;
-            }
-
+            // Set up the onstop handler BEFORE calling stop()
             mediaRecorder.onstop = async () => {
-                dispatch({ type: 'STOP_RECORDING' });
-                dispatch({ type: 'SET_PROCESSING', value: true });
-                console.log('[STT] Processing with Gemini...');
+                console.log('[STT] onstop fired, processing audio...');
 
+                // Stop all audio tracks
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
+
                 const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+                console.log('[STT] Audio blob size:', audioBlob.size);
+
+                if (audioBlob.size === 0) {
+                    console.log('[STT] No audio data recorded');
+                    dispatch({ type: 'SET_ERROR', value: 'No audio recorded' });
+                    dispatch({ type: 'SET_PROCESSING', value: false });
+                    resolve(null);
+                    return;
+                }
 
                 try {
-                    // Use new Gemini endpoint that does transcription + extraction in ONE call
-                    // This replaces the old Whisper → Phi pipeline
-                    // Benefits: Native Hindi/Hinglish support, single API call
                     const formData = new FormData();
                     formData.append('audio', audioBlob, 'recording.webm');
 
-                    console.log('[STT] Sending to Gemini (transcribe + extract)...');
+                    console.log('[STT] Sending to Gemini...');
                     const response = await fetch(API.transcribeAndExtract, {
                         method: 'POST',
                         body: formData,
@@ -128,6 +203,7 @@ export function useSpeechToText() {
 
                     if (!data.success) {
                         dispatch({ type: 'SET_ERROR', value: 'Transcription failed' });
+                        dispatch({ type: 'SET_PROCESSING', value: false });
                         resolve(null);
                         return;
                     }
@@ -137,7 +213,7 @@ export function useSpeechToText() {
                     dispatch({ type: 'SET_TRANSCRIPT', value: text });
                     console.log(`[STT] Transcribed (${data.language}):`, text);
 
-                    // Extract fields - already extracted by Gemini in the same call!
+                    // Extract fields
                     const info: ExtractedInfo = {
                         name: data.name || null,
                         relation: data.relation || null,
@@ -151,11 +227,21 @@ export function useSpeechToText() {
                 } catch (err) {
                     console.error('[STT] Error:', err);
                     dispatch({ type: 'SET_ERROR', value: 'Processing failed' });
+                    dispatch({ type: 'SET_PROCESSING', value: false });
                     resolve(null);
                 }
             };
 
-            mediaRecorder.stop();
+            // Now stop the recorder - this triggers onstop
+            try {
+                mediaRecorder.stop();
+                console.log('[STT] stop() called successfully');
+            } catch (err) {
+                console.error('[STT] Error stopping recorder:', err);
+                dispatch({ type: 'SET_ERROR', value: 'Failed to stop recording' });
+                dispatch({ type: 'SET_PROCESSING', value: false });
+                resolve(null);
+            }
         });
     }, []);
 

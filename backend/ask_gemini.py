@@ -41,6 +41,12 @@ async def process_gemini_query(audio_bytes: bytes) -> Dict[str, Any]:
         
         transcribe_prompt = """
         Transcribe this audio query. The user is asking about people they know.
+        
+        IMPORTANT:
+        - If speaking Hindi/Hinglish, write in ROMAN LETTERS (not Devanagari)
+        - Example: "Mera bhai kaun hai?" NOT "मेरा भाई कौन है?"
+        - Preserve mixed Hindi+English words naturally
+        
         Return ONLY the transcribed text, nothing else.
         """
         
