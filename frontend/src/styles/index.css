@@ -171,17 +171,30 @@
   }
 }
 
+html {
+  overflow-x: hidden;
+  /* Prevent horizontal scroll */
+  overscroll-behavior-x: none;
+  /* Prevent horizontal overscroll bounce */
+}
+
+body {
+  overflow-x: hidden;
+  min-height: 100%;
+}
+
 html,
 body,
 #root {
   width: 100%;
-  height: 100%;
-  /* Removed global overflow: hidden to allow Landing Page scroll */
-  /* Keep background from App Variable for default database/dark mode consistency, or allow overriden by layer base? */
   background: var(--color-bg);
   font-family: 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
+}
+
+html {
+  height: 100%;
 }
 
 /* ============================================
