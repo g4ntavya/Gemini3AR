@@ -169,7 +169,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         gsap.set(frameContainer, {
             xPercent: -50,
             yPercent: -42,
-            scale: isMobileView ? 1.8 : 2.42,
+            scale: isMobileView ? 1.8 : 2.52,
             rotation: isMobileView ? 90 : 0,
             x: 0,
             y: 0
@@ -472,7 +472,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                     left: '50%',
                                     transform: isMobile
                                         ? 'translate(-50%, -42%) scale(1.8) rotate(90deg)'
-                                        : 'translate(-50%, -42%) scale(2.42)',
+                                        : 'translate(-50%, -42%) scale(2.52)',
                                     zIndex: 10,
                                     transformStyle: 'preserve-3d'
                                 }}
