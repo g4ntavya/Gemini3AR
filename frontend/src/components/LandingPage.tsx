@@ -23,6 +23,8 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
     const rightTextRef = useRef<HTMLDivElement>(null);
     const bottomTextRef = useRef<HTMLParagraphElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+    const innerContentRef = useRef<HTMLDivElement>(null);
+    const bgContainerRef = useRef<HTMLDivElement>(null); // New ref for independent background parallax
     const contentTextRef = useRef<HTMLHeadingElement>(null);
     const tryDemoButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -59,10 +61,12 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         const hero = heroRef.current;
         const wrapper = wrapperRef.current;
         const content = contentRef.current;
+        const innerContent = innerContentRef.current;
+        const bgContainer = bgContainerRef.current;
         const leftText = leftTextRef.current;
         const frameContainer = frameContainerRef.current;
 
-        if (!hero || !wrapper || !content || !leftText || !frameContainer) return;
+        if (!hero || !wrapper || !content || !leftText || !frameContainer || !bgContainer) return;
 
         // Mouse parallax effect (existing)
         const handleMouseMove = (e: MouseEvent) => {
@@ -85,6 +89,18 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                 duration: 0.8,
                 ease: 'power2.out'
             });
+
+            // New: Sync BACKGROUND ONLY movement 1:1 with frame
+            // We move the Grid/Background independently so text doesn't move
+            gsap.to(bgContainer, {
+                x: xPos * 8, // Moves 1:1 with frame
+                y: yPos * 5,
+                duration: 0.8,
+                ease: 'power2.out'
+            });
+
+            // Note: 'content' (wrapper) and 'innerContent' (text) DO NOT move.
+            // This achieves the "floating text, moving background" effect.
 
             gsap.to(rightTextRef.current, {
                 x: xPos * 20,
@@ -168,7 +184,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
 
         gsap.set(frameContainer, {
             xPercent: -50,
-            yPercent: -42,
+            yPercent: -42, // Reverted to -42% to align with frame opening
             scale: isMobileView ? 1.8 : 2.52,
             rotation: isMobileView ? 90 : 0,
             x: 0,
@@ -176,20 +192,55 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         });
 
         gsap.set(content, {
-            scale: isMobileView ? 0.35 : 0.45,
+            scale: isMobileView ? 0.38 : 0.58, // Revert to "Frame Fill" scale
             rotation: isMobileView ? 90 : 0,
             opacity: 1,
             transformOrigin: 'center center'
         });
 
+        // Set inner content to be smaller initially (floating inside background)
+        if (innerContent) {
+            gsap.set(innerContent, {
+                scale: 0.8,
+                transformOrigin: 'center center'
+            });
+        }
+
+        // Sync mask container initial state with frame container
+
+
+
         // Phase 2: Frame and background ZOOM IN towards center (no fade)
         tl.to(frameContainer, {
-            scale: 12,
+            scale: 12, // Target Scale
             xPercent: -50, // Maintain center position
-            yPercent: -42,
+            yPercent: -42, // Maintain -42%
             duration: 0.5,
             ease: 'power2.inOut'
         }, 0.2);
+
+        // Content zooms from scaled down to full size - SYNCED WITH FRAME (BUT SEPARATE)
+        // Calculate exact scale to match frame expansion
+        // Desktop: 2.52 -> 12 (Ratio ~4.76) => Content 0.58 * 4.76 = 2.76
+        // Mobile: 1.8 -> 12 (Ratio ~6.66) => Content 0.38 * 6.66 = 2.53
+        const contentScaleTarget = isMobileView ? 2.53 : 2.76;
+        const innerContentScaleTarget = isMobileView ? 0.4 : 0.36; // 1 / contentScaleTarget
+
+        tl.to(content, {
+            scale: contentScaleTarget,
+            opacity: 1,
+            duration: 0.5,
+            ease: 'power2.inOut'
+        }, 0.2);
+
+        // Inner Content zooms up to fill the background
+        if (innerContent) {
+            tl.to(innerContent, {
+                scale: innerContentScaleTarget,
+                duration: 0.5,
+                ease: 'power2.inOut'
+            }, 0.2);
+        }
 
         // Frame fades to opacity 0 as it zooms (removes texture)
         tl.to(frameRef.current, {
@@ -205,35 +256,31 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
             ease: 'power2.inOut'
         }, 0.2);
 
-        // Content zooms from scaled down to full size
-        tl.to(content, {
-            scale: 1,
-            opacity: 1,
-            duration: 0.5,
-            ease: 'power2.out'
-        }, 0.45);
+
 
         const tryDemoButton = tryDemoButtonRef.current;
         if (tryDemoButton) {
             gsap.set(tryDemoButton, {
                 opacity: 0,
-                y: 10 // Subtle slide only
+                y: 10, // Subtle slide only
+                pointerEvents: 'none'
             });
 
             // Fast simple fade in
             tl.to(tryDemoButton, {
                 opacity: 1,
                 y: 0,
+                pointerEvents: 'auto',
                 duration: 0.1, // Very fast relative to scroll
                 ease: 'power1.out'
-            }, 0.6); // Start earlier
+            }, 0.3); // Start much earlier (was 0.6)
         }
 
         return () => {
             hero.removeEventListener('mousemove', handleMouseMove);
             ScrollTrigger.getAll().forEach(t => t.kill());
         };
-    }, []);
+    }, [isMobile]); // Re-run animation setup when mobile state changes
 
     // Typing effect on page load
     useEffect(() => {
@@ -416,10 +463,11 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
             <div ref={wrapperRef} className="relative">
                 {/* Hero Section - Green Background with Frame */}
                 <section ref={heroRef} className="relative w-full h-screen overflow-hidden" style={{ perspective: '1000px' }}>
+                    {/* Dynamic SVG Background with Cutout Mask */}
                     {/* Background Image */}
                     <img
                         ref={bgRef}
-                        src="/bg_final.png"
+                        src="/bg_solid.png"
                         alt=""
                         className="absolute inset-0 w-full h-full object-cover"
                         style={{
@@ -434,13 +482,39 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         {/* Main Content Area */}
                         <div className="flex-1 flex items-center justify-center relative">
                             {/* Left Side - Title (RemindAR) */}
+
+
+                            <div
+                                ref={frameContainerRef}
+                                style={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    transform: isMobile
+                                        ? 'translate(-50%, -42%) scale(1.8) rotate(90deg)'
+                                        : 'translate(-50%, -42%) scale(2.52)',
+                                    zIndex: 40, // Higher than content
+                                    transformStyle: 'preserve-3d',
+                                    pointerEvents: 'none' // Allow clicking content behind
+                                }}
+                            >
+                                <img
+                                    ref={frameRef}
+                                    src="/framee.png"
+                                    alt="Ornate frame"
+                                    className="relative z-40"
+                                />
+                            </div>
+
+                            {/* Left Side - Title (RemindAR) - MOVED AFTER FRAME FOR Z-INDEX STACKING */}
                             <div
                                 ref={leftTextRef}
-                                className="absolute left-0 top-1/2 flex flex-col z-40"
+                                className="absolute left-0 top-1/2 flex flex-col z-50"
                                 style={{
                                     transform: 'translateY(-50%) scale(0.79)',
                                     transformOrigin: 'left center',
-                                    transformStyle: 'preserve-3d'
+                                    transformStyle: 'preserve-3d',
+                                    zIndex: 100 // Force higher z-index
                                 }}
                             >
                                 <span
@@ -464,61 +538,50 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 </h1>
                             </div>
 
-                            <div
-                                ref={frameContainerRef}
-                                style={{
-                                    position: 'absolute',
-                                    top: '50%',
-                                    left: '50%',
-                                    transform: isMobile
-                                        ? 'translate(-50%, -42%) scale(1.8) rotate(90deg)'
-                                        : 'translate(-50%, -42%) scale(2.52)',
-                                    zIndex: 10,
-                                    transformStyle: 'preserve-3d'
-                                }}
-                            >
-                                <img
-                                    ref={frameRef}
-                                    src="/framee.png"
-                                    alt="Ornate frame"
-                                />
-                            </div>
-
                             {/* Content inside frame (visible and scaled down to fit initially) */}
                             <div
                                 ref={contentRef}
                                 className="absolute inset-0 flex items-center justify-center z-30"
                                 style={{
-                                    transform: isMobile ? 'scale(0.35) rotate(90deg)' : 'scale(0.45)',
+                                    transform: isMobile ? 'scale(0.38) rotate(90deg)' : 'scale(0.58)', // Matches initial "Frame Fill" state
                                     opacity: 1,
                                     transformOrigin: 'center center'
                                 }}
                             >
-                                {/* This is the content that zooms in */}
-                                <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                                    {/* Solid background layer to cover any texture */}
+                                {/* This is the container that holds the background and content */}
+                                <div
+                                    className="relative flex items-center justify-center overflow-hidden"
+                                    style={{
+                                        width: '1100px',
+                                        height: '750px',
+                                        backgroundColor: '#F5F0E8'
+                                    }}
+                                >
+                                    {/* Fully opaque inner container */}
                                     <div
-                                        className="rounded-lg relative overflow-hidden"
+                                        className="relative w-full h-full"
                                         style={{ backgroundColor: '#F5F0E8' }}
                                     >
-                                        {/* Fully opaque inner container - PLAIN SOLID BACKGROUND */}
+                                        {/* Line Grid Background - FILLS CONTAINER & DOES NOT ZOOM WITH INNER CONTENT */}
                                         <div
-                                            className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center p-8 relative"
-                                            style={{ backgroundColor: '#F5F0E8' }}
+                                            ref={bgContainerRef} // Moves independently
+                                            className="absolute inset-0 pointer-events-none flex items-center justify-center"
+                                            style={{ zIndex: 0 }}
                                         >
-                                            {/* Line Grid Background from public folder - FILLS ENTIRE SCREEN */}
-                                            <div
-                                                className="fixed inset-0 pointer-events-none flex items-center justify-center"
-                                                style={{ zIndex: 0 }}
-                                            >
-                                                <img
-                                                    src="/Line_Grid.svg"
-                                                    alt=""
-                                                    className="w-screen h-screen object-cover absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                                                    style={{ opacity: 0.5, minWidth: '100vw', minHeight: '100vh' }}
-                                                />
-                                            </div>
+                                            <img
+                                                src="/Line_Grid.svg"
+                                                alt=""
+                                                className="w-full h-full object-cover"
+                                                style={{ opacity: 0.15 }}
+                                            />
+                                        </div>
 
+                                        {/* Inner Content Wrapper - Starts small (0.8), zooms up to 1 */}
+                                        <div
+                                            ref={innerContentRef}
+                                            className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center p-12 relative w-full h-full"
+                                            style={{ transformOrigin: 'center center' }} // GSAP triggers scale
+                                        >
                                             {/* Left Column - Text Content */}
                                             <div className="space-y-6 md:space-y-8 relative z-10">
                                                 <h2
@@ -582,34 +645,34 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Right Side - Text */}
-                            <div
-                                ref={rightTextRef}
-                                className="absolute right-0 top-1/2 text-right z-20"
-                                style={{ transform: 'translateY(-50%) scale(1.3)', transformOrigin: 'right center' }}
-                            >
-                                <p
-                                    className="text-white text-sm sm:text-base md:text-lg leading-relaxed"
-                                    style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
-                                >
-                                    For the faces you'd have<br />
-                                    framed if you hadn't<br />
-                                    forgotten.
-                                </p>
-                            </div>
                         </div>
+                    </div>
 
-                        {/* Bottom Text */}
-                        <div className="pb-4 md:pb-8">
-                            <p
-                                ref={bottomTextRef}
-                                className="text-white text-center text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed"
-                                style={{ fontFamily: 'HelveticaNeue-UltraLight', transform: 'scale(1.5)' }}
-                            >
-                                Gemini powered assistant that helps people with memory challenges recognize loved ones and recall meaningful context.
-                            </p>
-                        </div>
+                    {/* Right Side - Text */}
+                    <div
+                        ref={rightTextRef}
+                        className="absolute right-8 md:right-16 top-1/2 text-right z-20"
+                        style={{ transform: 'translateY(-50%) scale(1.3)', transformOrigin: 'right center' }}
+                    >
+                        <p
+                            className="text-white text-sm sm:text-base md:text-lg leading-relaxed"
+                            style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
+                        >
+                            For the faces you'd have<br />
+                            framed if you hadn't<br />
+                            forgotten.
+                        </p>
+                    </div>
+
+                    {/* Bottom Text */}
+                    <div className="absolute bottom-8 left-0 right-0 z-20 text-center pb-4 md:pb-8">
+                        <p
+                            ref={bottomTextRef}
+                            className="text-white text-center text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed"
+                            style={{ fontFamily: 'HelveticaNeue-UltraLight', transform: 'scale(1.5)' }}
+                        >
+                            Gemini powered assistant that helps people with memory challenges recognize loved ones and recall meaningful context.
+                        </p>
                     </div>
                 </section>
             </div>
@@ -661,7 +724,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 <OrbitControls enableZoom={false} enablePan={false} enableRotate={false} />
                             </Canvas>
                         </div>
-
+                        {/* Designed for the moments - MOVED BACK INSIDE PINNED FLEX CONTAINER */}
                         <div
                             ref={textContainerRef}
                             className="text-left md:text-right space-y-6 max-w-full md:max-w-xl lg:max-w-2xl flex flex-col items-end justify-center"
@@ -682,8 +745,30 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                             </p>
                         </div>
                     </div>
+                </div>
+            </section>
 
-                    {/* Powered by Gemini Section - Full page */}
+            {/* Gemini & Features Section - Moved out of pinned section to prevent overlap */}
+            <section
+                className="relative w-full py-20 min-h-screen"
+                style={{ backgroundColor: '#F5F0E8' }}
+            >
+                {/* Grid Line Background for continuity */}
+                <svg
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    style={{ opacity: 0.08, zIndex: 0 }}
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    <defs>
+                        <pattern id="features-grid-3" width="30" height="30" patternUnits="userSpaceOnUse">
+                            <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#272728" strokeWidth="0.5" />
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#features-grid-3)" />
+                </svg>
+
+                {/* Powered by Gemini Section - Full page */}
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                     <div
                         ref={geminiSectionRef}
                         className="min-h-screen flex flex-col justify-center py-20"
@@ -711,9 +796,9 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         </div>
 
                         {/* Features Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 max-w-5xl mx-auto px-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 max-w-4xl mx-auto px-4">
                             {/* Feature 1 */}
-                            <div ref={geminiFeature1Ref} className="space-y-2">
+                            <div ref={geminiFeature1Ref} className="space-y-2 text-center">
                                 <h3
                                     className="text-xl md:text-2xl text-black font-bold"
                                     style={{ fontFamily: 'Moglan_DEMO' }}
@@ -729,7 +814,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                             </div>
 
                             {/* Feature 2 */}
-                            <div ref={geminiFeature2Ref} className="space-y-2">
+                            <div ref={geminiFeature2Ref} className="space-y-2 text-center">
                                 <h3
                                     className="text-xl md:text-2xl text-black font-bold"
                                     style={{ fontFamily: 'Moglan_DEMO' }}
@@ -745,7 +830,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                             </div>
 
                             {/* Feature 3 */}
-                            <div ref={geminiFeature3Ref} className="space-y-2">
+                            <div ref={geminiFeature3Ref} className="space-y-2 text-center">
                                 <h3
                                     className="text-xl md:text-2xl text-black font-bold"
                                     style={{ fontFamily: 'Moglan_DEMO' }}
@@ -761,31 +846,32 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                             </div>
 
                             {/* Feature 4 */}
-                            <div ref={geminiFeature4Ref} className="space-y-2">
+                            <div ref={geminiFeature4Ref} className="space-y-2 text-center">
+
                                 <h3
                                     className="text-xl md:text-2xl text-black font-bold"
                                     style={{ fontFamily: 'Moglan_DEMO' }}
                                 >
-                                    Multi-Language Processing
+                                    Advanced Speech to Text
                                 </h3>
                                 <p
                                     className="text-black text-base md:text-lg"
                                     style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
                                 >
-                                    Handles English, Hindi, Hinglish seamlessly.
+                                    Continuous listening with 99% accuracy suitable for long conversations.
                                 </p>
                             </div>
                         </div>
                     </div>
 
                     {/* Notable Features List */}
-                    <div className="mb-32 md:mb-40 mt-32 md:mt-48">
-                        <h4
-                            className="text-black text-sm tracking-wider mb-6"
-                            style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
+                    <div className="mb-16 md:mb-20 mt-32 md:mt-48">
+                        <h2
+                            className="text-4xl sm:text-5xl md:text-6xl text-black mb-12 text-center"
+                            style={{ fontFamily: 'Moglan_DEMO' }}
                         >
-                            [Notable Features]
-                        </h4>
+                            Notable Features
+                        </h2>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 lg:gap-16">
                             {/* Left Column - Features with Video */}
@@ -795,16 +881,18 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                     <p className="text-black font-helvetica font-bold text-xs sm:text-sm mb-3">
                                         Interactive Face Labels Hover to reveal info and actions.
                                     </p>
-                                    <video
-                                        src="/1768670517690173.mp4"
-                                        autoPlay
-                                        loop
-                                        muted
-                                        playsInline
-                                        className="w-full h-auto rounded-lg"
-                                    />
+                                    <div className="w-4/5 mx-auto">
+                                        <video
+                                            src="/1768670517690173.mp4"
+                                            autoPlay
+                                            loop
+                                            muted
+                                            playsInline
+                                            className="w-full h-auto rounded-lg"
+                                        />
+                                    </div>
                                     <p
-                                        className="text-black italic text-[9px] sm:text-xs mt-2"
+                                        className="text-black italic text-[9px] sm:text-xs mt-2 text-center"
                                         style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
                                     >
                                         (Hover animation)
@@ -819,13 +907,15 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                     <p className="text-black font-helvetica font-bold text-xs sm:text-sm mb-3">
                                         People Dashboard Swipeable cards with edit/delete.
                                     </p>
-                                    <img
-                                        src="/screenshot_bottom.png"
-                                        alt="Dashboard view"
-                                        className="w-full h-auto rounded-lg"
-                                    />
+                                    <div className="w-4/5 mx-auto">
+                                        <img
+                                            src="/screenshot_bottom.png"
+                                            alt="Dashboard view"
+                                            className="w-full h-auto rounded-lg"
+                                        />
+                                    </div>
                                     <p
-                                        className="text-black italic text-[9px] sm:text-xs mt-2"
+                                        className="text-black italic text-[9px] sm:text-xs mt-2 text-center"
                                         style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
                                     >
                                         (Dashboard view)
@@ -863,6 +953,8 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         </div>
                     </div>
                 </div>
+                {/* Extra padding at bottom to prevent footer overlap */}
+                <div className="h-16 w-full"></div>
             </section>
 
             {/* Footer Section */}
@@ -878,7 +970,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 RemindAR
                             </h3>
                             <p
-                                className="text-white/80 text-sm"
+                                className="text-white text-sm"
                                 style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
                             >
                                 A real-time memory assistant for AR glasses.
@@ -895,17 +987,17 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                             </h4>
                             <ul className="space-y-2">
                                 <li>
-                                    <button onClick={onStartDemo} className="text-white/70 text-sm hover:text-white transition-colors text-left w-full" style={{ fontFamily: 'HelveticaNeue-UltraLight' }}>
+                                    <button onClick={onStartDemo} className="text-white text-sm hover:text-gray-300 transition-colors text-left w-full" style={{ fontFamily: 'HelveticaNeue-UltraLight' }}>
                                         Try Demo
                                     </button>
                                 </li>
                                 <li>
-                                    <a href="#" className="text-white/70 text-sm hover:text-white transition-colors" style={{ fontFamily: 'HelveticaNeue-UltraLight' }}>
+                                    <a href="#" className="text-white text-sm hover:text-gray-300 transition-colors" style={{ fontFamily: 'HelveticaNeue-UltraLight' }}>
                                         Features
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="#" className="text-white/70 text-sm hover:text-white transition-colors" style={{ fontFamily: 'HelveticaNeue-UltraLight' }}>
+                                    <a href="#" className="text-white text-sm hover:text-gray-300 transition-colors" style={{ fontFamily: 'HelveticaNeue-UltraLight' }}>
                                         About
                                     </a>
                                 </li>
@@ -924,7 +1016,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 {/* Email */}
                                 <a
                                     href="mailto:gantavya.rr@gmail.com"
-                                    className="flex items-center gap-2 text-white/70 text-sm hover:text-white transition-colors"
+                                    className="flex items-center gap-2 text-white text-sm hover:text-gray-300 transition-colors"
                                     style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
                                 >
                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -937,7 +1029,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                     href="https://twitter.com/g4ntavya"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center gap-2 text-white/70 text-sm hover:text-white transition-colors"
+                                    className="flex items-center gap-2 text-white text-sm hover:text-gray-300 transition-colors"
                                     style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
                                 >
                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -952,14 +1044,14 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     {/* Copyright */}
                     <div className="mt-12 pt-6 border-t border-white/20">
                         <p
-                            className="text-white/50 text-xs text-center"
+                            className="text-white/70 text-xs text-center"
                             style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
                         >
                             © 2026 RemindAR. All rights reserved.
                         </p>
                     </div>
                 </div>
-            </footer>
-        </div>
+            </footer >
+        </div >
     );
 }

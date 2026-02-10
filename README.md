@@ -4,6 +4,14 @@ A real-time face recognition system with AR overlays, designed to help people wi
 
 ---
 
+## Demo Video
+
+[![RemindAR Demo](https://img.youtube.com/vi/6O9ROb6sgGM/maxresdefault.jpg)](https://youtu.be/6O9ROb6sgGM)
+
+[Watch on YouTube](https://youtu.be/6O9ROb6sgGM)
+
+---
+
 ## Overview
 
 RemindAR uses your webcam to detect faces, recognize identities, and display contextual information as floating labels. Think of it as a prototype for smart glasses that could help someone with dementia remember their family, caregivers, and friends.
