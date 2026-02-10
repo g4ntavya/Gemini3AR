@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { LandingPage } from './components/LandingPage';
+import { LandingPage } from './components/DesktopLandingPage';
 import { Camera } from './components/Camera';
 import { AROverlay } from './components/AROverlay';
 import { StatusIndicator } from './components/StatusIndicator';
@@ -17,6 +17,7 @@ import { useFaceDetection } from './hooks/useFaceDetection';
 import { cropFaceFromVideo } from './utils/faceUtils';
 import { Person } from './types';
 import { API } from './config/api';
+import { killAllStreams } from './utils/mediaStreamTracker';
 
 // Recognition settings 
 const RECOGNITION_INTERVAL = 200; // Faster recognition (was 500)
@@ -57,6 +58,23 @@ function App() {
         enabled: isDemoActive // Only connect when demo is active to prevent errors on landing page
     });
     const { faces, isModelLoaded, error: detectionError } = useFaceDetection(videoRef);
+
+    // Force kill all camera streams when demo is deactivated
+    useEffect(() => {
+        if (isDemoActive) return;
+
+        // Run immediately and again after delays to catch late async streams
+        killAllStreams();
+        const t1 = setTimeout(killAllStreams, 300);
+        const t2 = setTimeout(killAllStreams, 1000);
+        const t3 = setTimeout(killAllStreams, 2000);
+
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+            clearTimeout(t3);
+        };
+    }, [isDemoActive]);
 
     // Update dimensions
     useEffect(() => {
@@ -391,7 +409,13 @@ function App() {
                 />
             )}
 
-            <button className="back-button" onClick={() => setIsDemoActive(false)}>
+            <button className="back-button" onClick={() => {
+                // FORCE KILL all camera/media streams globally
+                killAllStreams();
+                setCameraReady(false);
+                setCameraError(null);
+                setIsDemoActive(false);
+            }}>
                 ← Back
             </button>
 

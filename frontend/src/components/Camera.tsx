@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState, forwardRef, useCallback } from 'react';
+import { trackStream } from '../utils/mediaStreamTracker';
 
 interface CameraDevice {
     deviceId: string;
@@ -40,6 +41,7 @@ export const Camera = forwardRef<HTMLVideoElement, CameraProps>(
         const localRef = useRef<HTMLVideoElement>(null);
         const videoRef = (ref as React.RefObject<HTMLVideoElement>) || localRef;
         const streamRef = useRef<MediaStream | null>(null);
+        const mountedRef = useRef(true);
         const menuRef = useRef<HTMLDivElement>(null);
 
         // Close menu when clicking outside
@@ -138,6 +140,16 @@ export const Camera = forwardRef<HTMLVideoElement, CameraProps>(
                     audio: false,
                 });
 
+                // If component unmounted while we were waiting for getUserMedia,
+                // immediately stop the stream to release the camera
+                if (!mountedRef.current) {
+                    console.log('[Camera] Component unmounted during getUserMedia, stopping stream');
+                    stream.getTracks().forEach(track => track.stop());
+                    return;
+                }
+
+                // Register with global tracker for force-kill capability
+                trackStream(stream);
                 streamRef.current = stream;
 
                 if (!isMobile()) {
@@ -197,6 +209,8 @@ export const Camera = forwardRef<HTMLVideoElement, CameraProps>(
         }, [onReady, onError, videoRef, enumerateCameras]);
 
         useEffect(() => {
+            mountedRef.current = true;
+
             if (isMobile()) {
                 initCamera(undefined, facingMode);
             } else {
@@ -204,8 +218,14 @@ export const Camera = forwardRef<HTMLVideoElement, CameraProps>(
             }
 
             return () => {
+                mountedRef.current = false;
                 if (streamRef.current) {
                     streamRef.current.getTracks().forEach(track => track.stop());
+                    streamRef.current = null;
+                }
+                // Also clear the video element
+                if (videoRef.current) {
+                    videoRef.current.srcObject = null;
                 }
             };
         }, [facingMode, selectedCameraId, initCamera]);

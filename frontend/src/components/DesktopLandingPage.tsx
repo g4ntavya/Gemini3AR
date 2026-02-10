@@ -184,7 +184,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
 
         gsap.set(frameContainer, {
             xPercent: -50,
-            yPercent: -42, // Reverted to -42% to align with frame opening
+            yPercent: -38, // Moved up from -42% to shift beige area higher
             scale: isMobileView ? 1.8 : 2.52,
             rotation: isMobileView ? 90 : 0,
             x: 0,
@@ -214,7 +214,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         tl.to(frameContainer, {
             scale: 12, // Target Scale
             xPercent: -50, // Maintain center position
-            yPercent: -42, // Maintain -42%
+            yPercent: -38, // Shifted up
             duration: 0.5,
             ease: 'power2.inOut'
         }, 0.2);
@@ -491,8 +491,8 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                     top: '50%',
                                     left: '50%',
                                     transform: isMobile
-                                        ? 'translate(-50%, -42%) scale(1.8) rotate(90deg)'
-                                        : 'translate(-50%, -42%) scale(2.52)',
+                                        ? 'translate(-50%, -38%) scale(1.8) rotate(90deg)'
+                                        : 'translate(-50%, -38%) scale(2.52)',
                                     zIndex: 40, // Higher than content
                                     transformStyle: 'preserve-3d',
                                     pointerEvents: 'none' // Allow clicking content behind
@@ -518,15 +518,16 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 }}
                             >
                                 <span
-                                    className="italic text-base sm:text-lg md:text-xl lg:text-2xl"
-                                    style={{ fontFamily: 'Mileast', color: '#9E6B30' }}
+                                    className="italic"
+                                    style={{ fontFamily: 'Mileast', color: '#9E6B30', fontSize: 'clamp(1rem, 1.7vw, 1.5rem)' }}
                                 >
                                     THIS IS
                                 </span>
                                 <h1
-                                    className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl xl:text-[10rem] tracking-wide whitespace-nowrap -mt-2"
+                                    className="tracking-wide whitespace-nowrap -mt-12"
                                     style={{
                                         fontFamily: 'Transcity',
+                                        fontSize: 'clamp(3.5rem, 11vw, 10rem)',
                                         background: 'linear-gradient(180deg, #9E7B30 0%, #D8B64E 30%, #E8C85E 100%)',
                                         WebkitBackgroundClip: 'text',
                                         WebkitTextFillColor: 'transparent',
@@ -552,8 +553,10 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 <div
                                     className="relative flex items-center justify-center overflow-hidden"
                                     style={{
-                                        width: '1100px',
-                                        height: '750px',
+                                        width: '75vw',
+                                        height: '51vw',
+                                        maxWidth: '1100px',
+                                        maxHeight: '750px',
                                         backgroundColor: '#F5F0E8'
                                     }}
                                 >
