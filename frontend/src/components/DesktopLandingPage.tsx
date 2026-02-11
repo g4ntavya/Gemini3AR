@@ -182,10 +182,10 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         });
 
         gsap.set(frameContainer, {
-            xPercent: -50,
+            xPercent: isMobileView ? -50 : -50,
             yPercent: isMobileView ? -50 : -38,
-            scale: isMobileView ? 4.5 : 2.52,
-            rotation: isMobileView ? 90 : 0,
+            scale: isMobileView ? 2.18 : 2.52, // Reverted to 4.5 as requested
+            rotation: 0, // Mobile frame is pre-rotated in image
             x: 0,
             y: 0
         });
@@ -501,9 +501,9 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 style={{
                                     position: 'absolute',
                                     top: '50%',
-                                    left: isMobile ? '45%' : '50%', // Visually centered on mobile
+                                    left: isMobile ? '47%' : '50%', // Visually centered on mobile
                                     transform: isMobile
-                                        ? 'translate(-50%, -50%) scale(4.5) rotate(90deg)'
+                                        ? 'translate(-50%, -50%) scale(4.5)' // Reverted to scale 4.5, no rotation
                                         : 'translate(-50%, -38%) scale(2.52)',
                                     zIndex: 40,
                                     transformStyle: 'preserve-3d',
@@ -512,7 +512,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                             >
                                 <img
                                     ref={frameRef}
-                                    src="/framee.png"
+                                    src={isMobile ? "/frame_mobile.png" : "/framee.png"}
                                     alt="Ornate frame"
                                     className="relative z-40"
                                 />
@@ -572,8 +572,8 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 <div
                                     className="relative flex items-center justify-center overflow-hidden"
                                     style={{
-                                        width: isMobile ? '51vw' : '75vw',
-                                        height: isMobile ? '75vw' : '51vw',
+                                        width: isMobile ? '54vw' : '75vw',
+                                        height: isMobile ? '78vw' : '51vw',
                                         maxWidth: isMobile ? '750px' : '1100px',
                                         maxHeight: isMobile ? '1100px' : '750px',
                                         backgroundColor: '#F5F0E8'
@@ -649,7 +649,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                             </div>
 
                                             {/* Right Column - Screenshot */}
-                                            <div className={`relative z-10 ${isMobile ? 'w-full max-w-[80%] mx-auto' : ''}`}>
+                                            <div className={`relative z-10 ${isMobile ? 'w-full max-w-[75%] mx-auto' : ''}`}>
                                                 <img
                                                     src="/screenshot_first.png"
                                                     alt="Web demo preview"
@@ -675,7 +675,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         className="absolute z-20"
                         style={{
                             ...(isMobile
-                                ? { bottom: '15%', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
+                                ? { bottom: '17%', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
                                 : { right: '4rem', top: '50%', transform: 'translateY(-50%) scale(1.3)', transformOrigin: 'right center', textAlign: 'right' as const }
                             )
                         }}
@@ -691,7 +691,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     </div>
 
                     {/* Bottom Text */}
-                    <div className="absolute left-0 right-0 z-20 text-center" style={{ bottom: isMobile ? '8%' : '2rem', padding: isMobile ? '0 1rem' : '0 2rem 2rem' }}>
+                    <div className="absolute left-0 right-0 z-20 text-center" style={{ bottom: isMobile ? '7%' : '2rem', padding: isMobile ? '0 1rem' : '0 2rem 2rem' }}>
                         <p
                             ref={bottomTextRef}
                             className="text-white text-center mx-auto leading-relaxed"
