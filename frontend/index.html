@@ -4,11 +4,23 @@
 <head>
   <meta charset="UTF-8" />
 
-  <meta name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="theme-color" content="#0B1A13" />
+  <meta name="theme-color" content="#0B1A13" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#0B1A13" media="(prefers-color-scheme: light)" />
+  <style>
+    html {
+      background-color: #0B1A13 !important;
+      color-scheme: dark;
+    }
+
+    body {
+      background-color: #0B1A13 !important;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
   <link rel="manifest" href="/manifest.json" />
   <meta name="description" content="RemindAR - AI-powered AR memory assistant" />
   <title>RemindAR - AR Memory Assistant</title>

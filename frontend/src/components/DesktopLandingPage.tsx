@@ -455,10 +455,14 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
 
     return (
         <div className="w-full">
+            {/* Safari UI Tint Sentinels - Forces bottom bar and status bar to use hero color */}
+            <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '5px', backgroundColor: '#0B1A13', zIndex: -10, pointerEvents: 'none' }} />
+            <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', height: '5px', backgroundColor: '#0B1A13', zIndex: -10, pointerEvents: 'none' }} />
+
             {/* Scroll Wrapper for pinning */}
             <div ref={wrapperRef} className="relative">
                 {/* Hero Section - Green Background with Frame */}
-                <section ref={heroRef} className="relative w-full h-screen overflow-hidden" style={{ perspective: '1000px' }}>
+                <section ref={heroRef} className="relative w-full h-[100dvh] overflow-hidden" style={{ perspective: '1000px' }}>
                     {/* Dynamic SVG Background with Cutout Mask */}
                     {/* Background Image */}
                     <img
@@ -694,7 +698,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
             {/* Features Section */}
             <section
                 ref={featuresSectionRef}
-                className="relative w-full py-12 md:py-16 lg:py-20 min-h-screen"
+                className="relative w-full py-12 md:py-16 lg:py-20 min-h-[100dvh]"
                 style={{ backgroundColor: '#F5F0E8' }}
             >
                 {/* Grid Line Background SVG - Behind everything */}
@@ -764,7 +768,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
 
             {/* Gemini & Features Section - Moved out of pinned section to prevent overlap */}
             <section
-                className="relative w-full py-20 min-h-screen"
+                className="relative w-full py-20 min-h-[100dvh]"
                 style={{ backgroundColor: '#F5F0E8' }}
             >
                 {/* Grid Line Background for continuity */}
@@ -785,7 +789,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                     <div
                         ref={geminiSectionRef}
-                        className="min-h-screen flex flex-col justify-center py-20"
+                        className="min-h-[100dvh] flex flex-col justify-center py-20"
                     >
                         {/* Powered by Gemini Heading */}
                         <div className="flex items-center justify-center gap-4 mb-16">

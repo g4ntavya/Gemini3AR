@@ -86,8 +86,9 @@
 }
 
 :root {
+  color-scheme: dark;
   /* App Theme Variables */
-  --color-bg: #09090b;
+  --color-bg: #0B1A13;
   --color-surface: #18181b;
   --color-border: #27272a;
   --color-text: #fafafa;
@@ -100,7 +101,8 @@
   --color-error: #ef4444;
 
   /* Replica Theme Variables (HSL) - Required for Tailwind Config */
-  --background: 0 0% 100%;
+  --background: 155 40% 7%;
+  /* Match #0B1A13 approximately in HSL */
   --foreground: 222.2 84% 4.9%;
   --card: 0 0% 100%;
   --card-foreground: 222.2 84% 4.9%;
