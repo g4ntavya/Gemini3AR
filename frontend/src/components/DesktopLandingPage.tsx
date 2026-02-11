@@ -77,6 +77,59 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         };
     }, []);
 
+    // Parallax handler moved to component scope for clean event listener management
+    const handleMouseMove = (e: MouseEvent) => {
+        const { clientX, clientY } = e;
+        const { innerWidth, innerHeight } = window;
+
+        const xPos = (clientX / innerWidth) - 0.5;
+        const yPos = (clientY / innerHeight) - 0.5;
+
+        gsap.to(bgRef.current, {
+            x: xPos * 10,
+            y: yPos * 10,
+            duration: 0.8,
+            ease: 'power2.out'
+        });
+
+        gsap.to(frameRef.current, {
+            x: xPos * 8,
+            y: yPos * 5,
+            duration: 0.8,
+            ease: 'power2.out'
+        });
+
+        if (bgContainerRef.current) {
+            gsap.to(bgContainerRef.current, {
+                x: xPos * 8, // Moves 1:1 with frame
+                y: yPos * 5,
+                duration: 0.8,
+                ease: 'power2.out'
+            });
+        }
+
+        gsap.to(rightTextRef.current, {
+            x: xPos * 20,
+            y: yPos * 15,
+            duration: 0.5,
+            ease: 'power2.out'
+        });
+
+        gsap.to(bottomTextRef.current, {
+            x: xPos * 20,
+            y: yPos * 15,
+            duration: 0.5,
+            ease: 'power2.out'
+        });
+
+        gsap.to(leftTextRef.current, {
+            x: xPos * 60,
+            y: yPos * 40,
+            duration: 0.4,
+            ease: 'power2.out'
+        });
+    };
+
     useEffect(() => {
         const hero = heroRef.current;
         const wrapper = wrapperRef.current;
@@ -89,62 +142,9 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         if (!hero || !wrapper || !content || !leftText || !frameContainer || !bgContainer) return;
 
         // Mouse parallax effect (existing)
-        const handleMouseMove = (e: MouseEvent) => {
-            const { clientX, clientY } = e;
-            const { innerWidth, innerHeight } = window;
-
-            const xPos = (clientX / innerWidth) - 0.5;
-            const yPos = (clientY / innerHeight) - 0.5;
-
-            gsap.to(bgRef.current, {
-                x: xPos * 10,
-                y: yPos * 10,
-                duration: 0.8,
-                ease: 'power2.out'
-            });
-
-            gsap.to(frameRef.current, {
-                x: xPos * 8,
-                y: yPos * 5,
-                duration: 0.8,
-                ease: 'power2.out'
-            });
-
-            // New: Sync BACKGROUND ONLY movement 1:1 with frame
-            // We move the Grid/Background independently so text doesn't move
-            gsap.to(bgContainer, {
-                x: xPos * 8, // Moves 1:1 with frame
-                y: yPos * 5,
-                duration: 0.8,
-                ease: 'power2.out'
-            });
-
-            // Note: 'content' (wrapper) and 'innerContent' (text) DO NOT move.
-            // This achieves the "floating text, moving background" effect.
-
-            gsap.to(rightTextRef.current, {
-                x: xPos * 20,
-                y: yPos * 15,
-                duration: 0.5,
-                ease: 'power2.out'
-            });
-
-            gsap.to(bottomTextRef.current, {
-                x: xPos * 20,
-                y: yPos * 15,
-                duration: 0.5,
-                ease: 'power2.out'
-            });
-
-            gsap.to(leftTextRef.current, {
-                x: xPos * 60,
-                y: yPos * 40,
-                duration: 0.4,
-                ease: 'power2.out'
-            });
-        };
-
-        hero.addEventListener('mousemove', handleMouseMove);
+        if (!isMobile) {
+            hero.addEventListener('mousemove', handleMouseMove);
+        }
 
         // ScrollTrigger animation
         const tl = gsap.timeline({
@@ -455,13 +455,17 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         ScrollTrigger.refresh();
 
         return () => {
+            const currentHero = heroRef.current;
+            if (currentHero && !isMobile) {
+                currentHero.removeEventListener('mousemove', handleMouseMove);
+            }
             ScrollTrigger.getAll().forEach(t => {
-                if (t.vars.trigger === featuresSection) {
+                if (t.vars.trigger === featuresSectionRef.current) {
                     t.kill();
                 }
             });
         };
-    }, []);
+    }, [isMobile]);
 
     return (
         <div className="w-full">
