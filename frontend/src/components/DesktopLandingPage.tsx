@@ -172,28 +172,27 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
             ease: 'power2.out'
         }, 0.05);
 
-        // Ensure frame stays centered - set initial position explicitly
-        // FIX: Explicitly set scales here to ensure GSAP doesn't lose them when parsing inline styles
         const isMobileView = window.innerWidth < 768;
 
         gsap.set(leftText, {
-            yPercent: -50,
-            scale: 0.79,
-            transformOrigin: 'left center'
+            xPercent: isMobileView ? 0 : 0,
+            yPercent: isMobileView ? 0 : -50,
+            scale: isMobileView ? 1 : 0.79,
+            transformOrigin: isMobileView ? 'center center' : 'left center'
         });
 
         gsap.set(frameContainer, {
             xPercent: -50,
-            yPercent: -38, // Moved up from -42% to shift beige area higher
-            scale: isMobileView ? 1.8 : 2.52,
+            yPercent: isMobileView ? -50 : -38,
+            scale: isMobileView ? 4.5 : 2.52,
             rotation: isMobileView ? 90 : 0,
             x: 0,
             y: 0
         });
 
         gsap.set(content, {
-            scale: isMobileView ? 0.38 : 0.58, // Revert to "Frame Fill" scale
-            rotation: isMobileView ? 90 : 0,
+            scale: isMobileView ? 0.85 : 0.58,
+            rotation: 0,
             opacity: 1,
             transformOrigin: 'center center'
         });
@@ -214,7 +213,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         tl.to(frameContainer, {
             scale: 12, // Target Scale
             xPercent: -50, // Maintain center position
-            yPercent: -38, // Shifted up
+            yPercent: isMobileView ? -50 : -38,
             duration: 0.5,
             ease: 'power2.inOut'
         }, 0.2);
@@ -222,9 +221,9 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         // Content zooms from scaled down to full size - SYNCED WITH FRAME (BUT SEPARATE)
         // Calculate exact scale to match frame expansion
         // Desktop: 2.52 -> 12 (Ratio ~4.76) => Content 0.58 * 4.76 = 2.76
-        // Mobile: 1.8 -> 12 (Ratio ~6.66) => Content 0.38 * 6.66 = 2.53
-        const contentScaleTarget = isMobileView ? 2.53 : 2.76;
-        const innerContentScaleTarget = isMobileView ? 0.4 : 0.36; // 1 / contentScaleTarget
+        // Mobile: 4.5 -> 12 (Ratio ~2.67) => Content 0.85 * 2.67 = 2.27 BUT we need more to cover screen!
+        const contentScaleTarget = isMobileView ? 4.5 : 2.76;
+        const innerContentScaleTarget = isMobileView ? 0.22 : 0.36; // 1 / contentScaleTarget
 
         tl.to(content, {
             scale: contentScaleTarget,
@@ -480,7 +479,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     {/* Background Image */}
                     <img
                         ref={bgRef}
-                        src="/bg_solid.png"
+                        src={isMobile ? "/bg_solid_mobile.png" : "/bg_solid.png"}
                         alt=""
                         className="absolute inset-0 w-full h-full object-cover"
                         style={{
@@ -502,13 +501,13 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 style={{
                                     position: 'absolute',
                                     top: '50%',
-                                    left: '50%',
+                                    left: isMobile ? '45%' : '50%', // Visually centered on mobile
                                     transform: isMobile
-                                        ? 'translate(-50%, -38%) scale(1.8) rotate(90deg)'
+                                        ? 'translate(-50%, -50%) scale(4.5) rotate(90deg)'
                                         : 'translate(-50%, -38%) scale(2.52)',
-                                    zIndex: 40, // Higher than content
+                                    zIndex: 40,
                                     transformStyle: 'preserve-3d',
-                                    pointerEvents: 'none' // Allow clicking content behind
+                                    pointerEvents: 'none'
                                 }}
                             >
                                 <img
@@ -522,19 +521,23 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                             {/* Left Side - Title (RemindAR) - MOVED AFTER FRAME FOR Z-INDEX STACKING */}
                             <div
                                 ref={leftTextRef}
-                                className="absolute top-1/2 flex flex-col z-50"
+                                className="absolute flex flex-col z-50"
                                 style={{
-                                    left: 'max(-60px, min(0px, calc((100vw - 1440px) * 0.12)))',
-                                    transform: 'translateY(-50%)',
-                                    scale: 'clamp(0.2, calc(0.79 * 100vw / 1440), 0.79)',
-                                    transformOrigin: 'left center',
+                                    top: isMobile ? '5%' : '50%',
+                                    left: isMobile ? '0' : 'max(-60px, min(0px, calc((100vw - 1440px) * 0.12)))',
+                                    transform: isMobile ? 'none' : 'translateY(-50%)',
+                                    scale: isMobile ? '1' : 'clamp(0.2, calc(0.79 * 100vw / 1440), 0.79)',
+                                    transformOrigin: isMobile ? 'center center' : 'left center',
                                     transformStyle: 'preserve-3d',
-                                    zIndex: 100
+                                    zIndex: 100,
+                                    textAlign: isMobile ? 'center' as const : 'left' as const,
+                                    alignItems: isMobile ? 'center' as const : 'flex-start' as const,
+                                    width: isMobile ? '100%' : 'auto'
                                 }}
                             >
                                 <span
                                     className="italic"
-                                    style={{ fontFamily: 'Mileast', color: '#9E6B30', fontSize: 'clamp(0.7rem, 1.7vw, 1.5rem)' }}
+                                    style={{ fontFamily: 'Mileast', color: '#9E6B30', fontSize: isMobile ? '1.3rem' : 'clamp(0.7rem, 1.7vw, 1.5rem)' }}
                                 >
                                     THIS IS
                                 </span>
@@ -542,8 +545,8 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                     className="tracking-wide whitespace-nowrap"
                                     style={{
                                         fontFamily: 'Transcity',
-                                        fontSize: 'clamp(2.5rem, 11vw, 10rem)',
-                                        marginTop: 'clamp(-3rem, -3.3vw, -0.5rem)',
+                                        fontSize: isMobile ? '21vw' : 'clamp(2.5rem, 11vw, 10rem)',
+                                        marginTop: isMobile ? '-1.5rem' : 'clamp(-3rem, -3.3vw, -0.5rem)',
                                         background: 'linear-gradient(180deg, #9E7B30 0%, #D8B64E 30%, #E8C85E 100%)',
                                         WebkitBackgroundClip: 'text',
                                         WebkitTextFillColor: 'transparent',
@@ -560,7 +563,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 ref={contentRef}
                                 className="absolute inset-0 flex items-center justify-center z-30"
                                 style={{
-                                    transform: isMobile ? 'scale(0.38) rotate(90deg)' : 'scale(0.58)', // Matches initial "Frame Fill" state
+                                    transform: isMobile ? 'scale(0.85)' : 'scale(0.58)',
                                     opacity: 1,
                                     transformOrigin: 'center center'
                                 }}
@@ -569,10 +572,10 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 <div
                                     className="relative flex items-center justify-center overflow-hidden"
                                     style={{
-                                        width: '75vw',
-                                        height: '51vw',
-                                        maxWidth: '1100px',
-                                        maxHeight: '750px',
+                                        width: isMobile ? '51vw' : '75vw',
+                                        height: isMobile ? '75vw' : '51vw',
+                                        maxWidth: isMobile ? '750px' : '1100px',
+                                        maxHeight: isMobile ? '1100px' : '750px',
                                         backgroundColor: '#F5F0E8'
                                     }}
                                 >
@@ -670,12 +673,17 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     {/* Right Side - Text */}
                     <div
                         ref={rightTextRef}
-                        className="absolute right-8 md:right-16 top-1/2 text-right z-20"
-                        style={{ transform: 'translateY(-50%) scale(1.3)', transformOrigin: 'right center' }}
+                        className="absolute z-20"
+                        style={{
+                            ...(isMobile
+                                ? { bottom: '14%', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
+                                : { right: '4rem', top: '50%', transform: 'translateY(-50%) scale(1.3)', transformOrigin: 'right center', textAlign: 'right' as const }
+                            )
+                        }}
                     >
                         <p
-                            className="text-white text-sm sm:text-base md:text-lg leading-relaxed"
-                            style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
+                            className="text-white leading-relaxed"
+                            style={{ fontFamily: 'HelveticaNeue-UltraLight', fontSize: isMobile ? '1.1rem' : undefined }}
                         >
                             For the faces you'd have<br />
                             framed if you hadn't<br />
@@ -684,11 +692,17 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     </div>
 
                     {/* Bottom Text */}
-                    <div className="absolute bottom-8 left-0 right-0 z-20 text-center pb-4 md:pb-8">
+                    <div className="absolute left-0 right-0 z-20 text-center" style={{ bottom: isMobile ? '3%' : '2rem', padding: isMobile ? '0 1rem' : '0 2rem 2rem' }}>
                         <p
                             ref={bottomTextRef}
-                            className="text-white text-center text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed"
-                            style={{ fontFamily: 'HelveticaNeue-UltraLight', transform: 'scale(1.5)' }}
+                            className="text-white text-center mx-auto leading-relaxed"
+                            style={{
+                                fontFamily: 'HelveticaNeue-UltraLight',
+                                transform: isMobile ? 'scale(1)' : 'scale(1.5)',
+                                fontSize: isMobile ? '0.8rem' : undefined,
+                                maxWidth: isMobile ? '100%' : '42rem',
+                                opacity: isMobile ? 0.7 : undefined
+                            }}
                         >
                             Gemini powered assistant that helps people with memory challenges recognize loved ones and recall meaningful context.
                         </p>
