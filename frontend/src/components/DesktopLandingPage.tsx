@@ -455,10 +455,6 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
 
     return (
         <div className="w-full">
-            {/* Safari UI Tint Sentinels - Forces bottom bar and status bar to use hero color */}
-            <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '3px', backgroundColor: '#0B1A13', zIndex: 9999, pointerEvents: 'none' }} />
-            <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', height: '3px', backgroundColor: '#0B1A13', zIndex: 9999, pointerEvents: 'none' }} />
-
             {/* Scroll Wrapper for pinning */}
             <div ref={wrapperRef} className="relative">
                 {/* Hero Section - Green Background with Frame */}
@@ -599,7 +595,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                             <div className={`relative z-10 ${isMobile ? 'text-center space-y-4' : 'space-y-6 md:space-y-8'}`}>
                                                 <h2
                                                     ref={contentTextRef}
-                                                    className={`${isMobile ? 'text-[5vw] leading-tight' : 'text-2xl sm:text-3xl md:text-4xl lg:text-[40px] leading-tight'}`}
+                                                    className={`${isMobile ? 'text-[4.6vw] leading-tight' : 'text-2xl sm:text-3xl md:text-4xl lg:text-[40px] leading-tight'}`}
                                                     style={{ fontFamily: 'Moglan_DEMO', color: '#272728' }}
                                                 >
                                                     <span className="underline decoration-1 underline-offset-2" style={{ textDecorationColor: '#272728' }}>RemindAR</span>{typedText.slice(8)}{!isTypingComplete && <span className="animate-pulse">|</span>}
@@ -661,8 +657,8 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         className="absolute z-20"
                         style={{
                             ...(isMobile
-                                ? { bottom: 'calc(16% - 5px)', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
-                                : { right: '4rem', top: '50%', transform: 'translateY(calc(-50% + 5px)) scale(1.3)', transformOrigin: 'right center', textAlign: 'right' as const }
+                                ? { bottom: 'calc(16% - 15px)', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
+                                : { right: '4rem', top: '50%', transform: 'translateY(calc(-50% + 15px)) scale(1.3)', transformOrigin: 'right center', textAlign: 'right' as const }
                             )
                         }}
                     >
@@ -677,7 +673,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     </div>
 
                     {/* Bottom Text */}
-                    <div className="absolute left-0 right-0 z-20 text-center" style={{ bottom: isMobile ? '7%' : '2rem', padding: isMobile ? '0 1rem env(safe-area-inset-bottom)' : '0 2rem 2rem' }}>
+                    <div className="absolute left-0 right-0 z-20 text-center" style={{ bottom: isMobile ? '7%' : '2rem', padding: isMobile ? '0 1rem' : '0 2rem 2rem' }}>
                         <p
                             ref={bottomTextRef}
                             className="text-white text-center mx-auto leading-relaxed"
