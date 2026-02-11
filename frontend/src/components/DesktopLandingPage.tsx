@@ -25,6 +25,16 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
     const contentRef = useRef<HTMLDivElement>(null);
     const innerContentRef = useRef<HTMLDivElement>(null);
     const bgContainerRef = useRef<HTMLDivElement>(null); // New ref for independent background parallax
+    const featureVideoRef = useRef<HTMLVideoElement>(null);
+
+    // Guaranteed Video Autoplay on Mobile
+    useEffect(() => {
+        if (featureVideoRef.current) {
+            featureVideoRef.current.play().catch(error => {
+                console.log("Autoplay prevented:", error);
+            });
+        }
+    }, []);
     const contentTextRef = useRef<HTMLHeadingElement>(null);
     const tryDemoButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -531,14 +541,15 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                         fontFamily: 'Transcity',
                                         fontSize: isMobile ? '17vw' : 'clamp(2.5rem, 11vw, 10rem)',
                                         marginTop: isMobile ? '-1.5rem' : 'clamp(-3rem, -3.3vw, -0.5rem)',
+                                        filter: 'drop-shadow(2px 3px 4px rgba(0,0,0,0.5))'
+                                    }}
+                                >
+                                    <span style={{
                                         background: 'linear-gradient(180deg, #9E7B30 0%, #D8B64E 30%, #E8C85E 100%)',
                                         WebkitBackgroundClip: 'text',
                                         WebkitTextFillColor: 'transparent',
                                         backgroundClip: 'text',
-                                        filter: 'drop-shadow(2px 3px 4px rgba(0,0,0,0.5))'
-                                    }}
-                                >
-                                    RemindAR
+                                    }}>Remind</span><span style={{ color: '#FF0000' }}>AR</span>
                                 </h1>
                             </div>
 
@@ -694,7 +705,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
             {/* Features Section */}
             <section
                 ref={featuresSectionRef}
-                className="relative w-full py-12 md:py-16 lg:py-20 min-h-[100dvh]"
+                className="relative w-full py-12 md:py-16 lg:py-20 min-h-[100dvh] -mt-[1px]"
                 style={{ backgroundColor: '#F5F0E8' }}
             >
                 {/* Grid Line Background SVG - Behind everything */}
@@ -897,6 +908,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                     </p>
                                     <div className="w-4/5 mx-auto">
                                         <video
+                                            ref={featureVideoRef}
                                             src="/1768670517690173.mp4"
                                             autoPlay
                                             loop
@@ -972,7 +984,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
             </section>
 
             {/* Footer Section */}
-            <footer className="w-full bg-remindar-brown py-12 md:py-16">
+            <footer className="w-full bg-remindar-brown py-12 md:py-16 -mt-[1px]">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
                         {/* Brand */}
