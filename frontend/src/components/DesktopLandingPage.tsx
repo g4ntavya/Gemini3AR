@@ -44,7 +44,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
 
     const [typedText, setTypedText] = useState('');
     const [isTypingComplete, setIsTypingComplete] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
+    const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
     const fullText = 'RemindAR is a real-time memory assistant that provides gentle, in the moment context during interactions.';
 
     // Mobile detection
@@ -52,9 +52,19 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 768);
         };
-        checkMobile();
+        // Initial check is now in useState initializer
         window.addEventListener('resize', checkMobile);
         return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    // Robust ScrollTrigger refresh to handle delayed loading of 3D models/images
+    useEffect(() => {
+        const timer1 = setTimeout(() => ScrollTrigger.refresh(), 500);
+        const timer2 = setTimeout(() => ScrollTrigger.refresh(), 1500);
+        return () => {
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+        };
     }, []);
 
     useEffect(() => {
@@ -131,9 +141,10 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
             scrollTrigger: {
                 trigger: wrapper,
                 start: 'top top',
-                end: '+=200%',
+                end: '+=150%',
                 pin: true,
                 scrub: 0.5,
+                invalidateOnRefresh: true,
             }
         });
 
@@ -201,6 +212,8 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         if (innerContent) {
             gsap.set(innerContent, {
                 scale: 0.8,
+                y: isMobileView ? 24 : 0, // Nudged down further (was 15)
+                yPercent: 0,
                 transformOrigin: 'center center'
             });
         }
@@ -223,7 +236,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         // Desktop: 2.52 -> 12 (Ratio ~4.76) => Content 0.58 * 4.76 = 2.76
         // Mobile: 4.5 -> 12 (Ratio ~2.67) => Content 0.85 * 2.67 = 2.27 BUT we need more to cover screen!
         const contentScaleTarget = isMobileView ? 4.5 : 2.76;
-        const innerContentScaleTarget = isMobileView ? 0.22 : 0.36; // 1 / contentScaleTarget
+        const innerContentScaleTarget = isMobileView ? 0.35 : 0.36; // Increased from 0.22 to 0.35 to keep content larger
 
         tl.to(content, {
             scale: contentScaleTarget,
@@ -236,6 +249,8 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         if (innerContent) {
             tl.to(innerContent, {
                 scale: innerContentScaleTarget,
+                yPercent: 0,
+                y: isMobileView ? 13 : 0, // Land slightly lower than perfect center (was 5)
                 duration: 0.5,
                 ease: 'power2.inOut'
             }, 0.2);
@@ -250,7 +265,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
 
         // Background also zooms in towards center (no fade)
         tl.to(bgRef.current, {
-            scale: 4,
+            scale: 4, // Reverted zoom scale to 4 (desktop level) for natural fit
             duration: 0.5,
             ease: 'power2.inOut'
         }, 0.2);
@@ -329,7 +344,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         const rotationX = Math.sin(rotationProgress * Math.PI * 2) * 0.15;
 
                         if (glassesRef.current) {
-                            const mobileScale = window.innerWidth < 768 ? 2.5 : 4;
+                            const mobileScale = window.innerWidth < 768 ? 3.2 : 4; // Slightly reduced mobile scale from 4.0 to 3.2
                             glassesRef.current.setScale(mobileScale);
                             glassesRef.current.setRotation(rotationX, rotationY, 0);
                         }
@@ -376,84 +391,53 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
             }, 0.5);
         }
 
-        // === GEMINI SECTION - SEPARATE ScrollTrigger that animates when visible ===
+        // === GEMINI SECTION - Robust ScrollTrigger ===
         if (geminiSectionRef.current) {
-            gsap.set(geminiSectionRef.current, { opacity: 0, y: 80 });
+            gsap.set(geminiSectionRef.current, { opacity: 0, y: 50 });
 
-            const geminiSt = ScrollTrigger.create({
+            ScrollTrigger.create({
                 trigger: geminiSectionRef.current,
-                start: 'top 80%',
+                start: 'top 90%',
                 onEnter: () => {
                     gsap.to(geminiSectionRef.current, {
                         opacity: 1,
                         y: 0,
                         duration: 0.8,
-                        ease: 'power2.out'
+                        ease: 'power2.out',
+                        overwrite: true
                     });
                 },
-                once: true
+                // If the user scrolls back up, keep it visible or reset it?
+                // For "award winning" feel, usually we want it to stay once triggered or re-fire cleanly.
+                // Removing 'once: true' allows it to re-evaluate on refresh.
             });
-            // If already scrolled past, fire immediately
-            if (geminiSt.progress > 0) {
-                gsap.set(geminiSectionRef.current, { opacity: 1, y: 0 });
-            }
         }
 
-        // Gemini heading - animates when visible
-        if (geminiHeadingRef.current) {
-            gsap.set(geminiHeadingRef.current, {
-                opacity: 0,
-                scale: 0.9,
-                letterSpacing: '0.3em'
-            });
-
-            const headingSt = ScrollTrigger.create({
-                trigger: geminiHeadingRef.current,
-                start: 'top 85%',
-                onEnter: () => {
-                    gsap.to(geminiHeadingRef.current, {
-                        opacity: 1,
-                        scale: 1,
-                        letterSpacing: '0.02em',
-                        duration: 0.6,
-                        ease: 'power3.out'
-                    });
-                },
-                once: true
-            });
-            if (headingSt.progress > 0) {
-                gsap.set(geminiHeadingRef.current, { opacity: 1, scale: 1, letterSpacing: '0.02em' });
-            }
-        }
-
-        // Feature cards - each animates when it scrolls into view
+        // Feature cards
         const featureRefs = [geminiFeature1Ref, geminiFeature2Ref, geminiFeature3Ref, geminiFeature4Ref];
         featureRefs.forEach((ref, index) => {
             if (ref.current) {
                 gsap.set(ref.current, {
                     opacity: 0,
-                    y: 30,
-                    filter: 'blur(6px)'
+                    y: 20,
+                    filter: 'blur(4px)'
                 });
 
-                const featureSt = ScrollTrigger.create({
+                ScrollTrigger.create({
                     trigger: ref.current,
-                    start: 'top 90%',
+                    start: 'top 95%',
                     onEnter: () => {
                         gsap.to(ref.current, {
                             opacity: 1,
                             y: 0,
                             filter: 'blur(0px)',
-                            duration: 0.5,
+                            duration: 0.6,
                             delay: index * 0.1,
-                            ease: 'power2.out'
+                            ease: 'power2.out',
+                            overwrite: true
                         });
-                    },
-                    once: true
+                    }
                 });
-                if (featureSt.progress > 0) {
-                    gsap.set(ref.current, { opacity: 1, y: 0, filter: 'blur(0px)' });
-                }
             }
         });
 
@@ -470,7 +454,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
     }, []);
 
     return (
-        <div className="w-full" style={{ background: '#F5F0E6' }}>
+        <div className="w-full">
             {/* Scroll Wrapper for pinning */}
             <div ref={wrapperRef} className="relative">
                 {/* Hero Section - Green Background with Frame */}
@@ -484,7 +468,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         className="absolute inset-0 w-full h-full object-cover"
                         style={{
                             scale: '1.1',
-                            transform: isMobile ? 'rotate(90deg) scale(1.5)' : 'none',
+                            transform: isMobile ? 'scale(1.1)' : 'none', // Reduced initial scale for better fit
                             transformOrigin: 'center center'
                         }}
                     />
@@ -503,7 +487,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                     top: '50%',
                                     left: isMobile ? '47%' : '50%', // Visually centered on mobile
                                     transform: isMobile
-                                        ? 'translate(-50%, -50%) scale(4.5)' // Reverted to scale 4.5, no rotation
+                                        ? 'translate(-50%, -50%) scale(2.18)' // Synced with GSAP initial state
                                         : 'translate(-50%, -38%) scale(2.52)',
                                     zIndex: 40,
                                     transformStyle: 'preserve-3d',
@@ -572,8 +556,8 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                 <div
                                     className="relative flex items-center justify-center overflow-hidden"
                                     style={{
-                                        width: isMobile ? '54vw' : '75vw',
-                                        height: isMobile ? '78vw' : '51vw',
+                                        width: isMobile ? '56vw' : '75vw',
+                                        height: isMobile ? '80vw' : '51vw',
                                         maxWidth: isMobile ? '750px' : '1100px',
                                         maxHeight: isMobile ? '1100px' : '750px',
                                         backgroundColor: '#F5F0E8'
@@ -594,7 +578,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                                 src="/Line_Grid.svg"
                                                 alt=""
                                                 className="w-full h-full object-cover"
-                                                style={{ opacity: 0.15 }}
+                                                style={{ opacity: isMobile ? 0.25 : 0.15 }}
                                             />
                                         </div>
 
@@ -602,7 +586,10 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                         <div
                                             ref={innerContentRef}
                                             className={`relative w-full h-full ${isMobile ? 'flex flex-col-reverse p-6 justify-center gap-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center p-12'}`}
-                                            style={{ transformOrigin: 'center center' }}
+                                            style={{
+                                                transformOrigin: 'center center',
+                                                transform: 'scale(0.8)' // Synced with GSAP initial state
+                                            }}
                                         >
                                             {/* Left Column - Text Content */}
                                             <div className={`relative z-10 ${isMobile ? 'text-center space-y-4' : 'space-y-6 md:space-y-8'}`}>
@@ -614,38 +601,33 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                                     <span className="underline decoration-1 underline-offset-2" style={{ textDecorationColor: '#272728' }}>RemindAR</span>{typedText.slice(8)}{!isTypingComplete && <span className="animate-pulse">|</span>}
                                                 </h2>
 
-                                                {/* Button hidden on mobile initially or styled differently? Keeping same but centered */}
-                                                {!isMobile && (
-                                                    <>
-                                                        <button
-                                                            ref={tryDemoButtonRef}
-                                                            onClick={onStartDemo}
-                                                            className="bg-remindar-button-brown text-remindar-button-text text-sm md:text-base px-6 py-3 hover:brightness-110 transition-all duration-300"
-                                                            style={{ fontFamily: 'Mileast', fontStyle: 'italic', opacity: 0 }}
-                                                        >
-                                                            Try Demo
-                                                        </button>
-                                                        <p
-                                                            className="text-black text-[10px] sm:text-xs mt-2 opacity-0"
-                                                            style={{ fontFamily: 'HelveticaNeue-UltraLight', opacity: 0 }}
-                                                            ref={(el) => {
-                                                                if (el && !isMobile) { // Only animate on desktop for now?
-                                                                    gsap.set(el, { opacity: 0, y: 10 });
-                                                                    ScrollTrigger.create({
-                                                                        trigger: el,
-                                                                        start: 'top 95%',
-                                                                        onEnter: () => {
-                                                                            gsap.to(el, { opacity: 0.7, y: 0, duration: 0.5, delay: 0.3, ease: 'power2.out' });
-                                                                        },
-                                                                        once: true
-                                                                    });
+                                                {/* Button and Paragraph - Visible on mobile now */}
+                                                <button
+                                                    ref={tryDemoButtonRef}
+                                                    onClick={onStartDemo}
+                                                    className="bg-remindar-button-brown text-remindar-button-text text-[10px] sm:text-sm md:text-base px-4 py-2 md:px-6 md:py-3 hover:brightness-110 transition-all duration-300"
+                                                    style={{ fontFamily: 'Mileast', fontStyle: 'italic', opacity: 0 }}
+                                                >
+                                                    Try Demo
+                                                </button>
+                                                <p
+                                                    className="text-black text-[10px] sm:text-xs mt-2 opacity-0"
+                                                    style={{ fontFamily: 'HelveticaNeue-UltraLight', opacity: 0 }}
+                                                    ref={(el) => {
+                                                        if (el) {
+                                                            gsap.set(el, { opacity: 0, y: 10 });
+                                                            ScrollTrigger.create({
+                                                                trigger: el,
+                                                                start: 'top 95%',
+                                                                onEnter: () => {
+                                                                    gsap.to(el, { opacity: 0.7, y: 0, duration: 0.5, delay: 0.3, ease: 'power2.out', overwrite: true });
                                                                 }
-                                                            }}
-                                                        >
-                                                            (camera and mic required)
-                                                        </p>
-                                                    </>
-                                                )}
+                                                            });
+                                                        }
+                                                    }}
+                                                >
+                                                    (camera and mic required)
+                                                </p>
                                             </div>
 
                                             {/* Right Column - Screenshot */}
@@ -653,7 +635,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                                 <img
                                                     src="/screenshot_first.png"
                                                     alt="Web demo preview"
-                                                    className="w-full h-auto shadow-sm"
+                                                    className="w-full h-auto"
                                                 />
                                                 <p
                                                     className="text-black italic text-[9px] sm:text-xs mt-1 text-center"
@@ -675,7 +657,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         className="absolute z-20"
                         style={{
                             ...(isMobile
-                                ? { bottom: '17%', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
+                                ? { bottom: '16%', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
                                 : { right: '4rem', top: '50%', transform: 'translateY(-50%) scale(1.3)', transformOrigin: 'right center', textAlign: 'right' as const }
                             )
                         }}
@@ -744,7 +726,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         {/* 3D Glasses Model Container - Smaller on mobile */}
                         <div
                             ref={glassesContainerRef}
-                            className={`mb-8 md:mb-0 relative z-20 ${isMobile ? 'w-[320px] h-[220px]' : 'w-[500px] h-[350px] md:w-[700px] md:h-[500px]'}`}
+                            className={`mb-8 md:mb-0 relative z-20 ${isMobile ? 'w-full h-[320px]' : 'w-[500px] h-[350px] md:w-[700px] md:h-[500px]'}`}
                         >
                             <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
                                 <ambientLight intensity={0.6} />

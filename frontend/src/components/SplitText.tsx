@@ -50,6 +50,7 @@ const SplitText: React.FC<SplitTextProps> = ({
                 stagger,
                 delay,
                 ease: 'back.out(1.7)',
+                overwrite: true,
             });
         };
 
@@ -58,7 +59,6 @@ const SplitText: React.FC<SplitTextProps> = ({
                 trigger: containerRef.current,
                 start: triggerStart,
                 onEnter: animateIn,
-                once: true,
             });
 
             // If element is already past the trigger point (e.g. page loaded mid-scroll),

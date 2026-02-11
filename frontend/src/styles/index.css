@@ -187,7 +187,8 @@ html,
 body,
 #root {
   width: 100%;
-  background: var(--color-bg);
+  background: #0B1A13;
+  /* Safari uses this for bottom bar glass tint */
   font-family: 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
