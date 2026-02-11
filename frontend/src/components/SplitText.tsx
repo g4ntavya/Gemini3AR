@@ -31,6 +31,9 @@ const SplitText: React.FC<SplitTextProps> = ({
     useEffect(() => {
         if (!containerRef.current || charsRef.current.length === 0) return;
 
+        // Trim stale refs if text length changed
+        charsRef.current = charsRef.current.slice(0, text.length);
+
         // Set initial state - hidden
         gsap.set(charsRef.current, {
             opacity: 0,
@@ -51,24 +54,27 @@ const SplitText: React.FC<SplitTextProps> = ({
         };
 
         if (triggerOnScroll) {
-            ScrollTrigger.create({
+            const st = ScrollTrigger.create({
                 trigger: containerRef.current,
                 start: triggerStart,
                 onEnter: animateIn,
                 once: true,
             });
+
+            // If element is already past the trigger point (e.g. page loaded mid-scroll),
+            // fire the animation immediately so text doesn't stay invisible
+            if (st.progress > 0) {
+                animateIn();
+            }
+
+            return () => {
+                st.kill();
+            };
         } else {
             animateIn();
+            return undefined;
         }
-
-        return () => {
-            ScrollTrigger.getAll().forEach((t) => {
-                if (t.vars.trigger === containerRef.current) {
-                    t.kill();
-                }
-            });
-        };
-    }, [delay, duration, stagger, triggerOnScroll, triggerStart]);
+    }, [text, delay, duration, stagger, triggerOnScroll, triggerStart]);
 
     const chars = text.split('');
 

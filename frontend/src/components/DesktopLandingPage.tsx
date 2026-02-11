@@ -381,7 +381,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         if (geminiSectionRef.current) {
             gsap.set(geminiSectionRef.current, { opacity: 0, y: 80 });
 
-            ScrollTrigger.create({
+            const geminiSt = ScrollTrigger.create({
                 trigger: geminiSectionRef.current,
                 start: 'top 80%',
                 onEnter: () => {
@@ -394,6 +394,10 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                 },
                 once: true
             });
+            // If already scrolled past, fire immediately
+            if (geminiSt.progress > 0) {
+                gsap.set(geminiSectionRef.current, { opacity: 1, y: 0 });
+            }
         }
 
         // Gemini heading - animates when visible
@@ -404,7 +408,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                 letterSpacing: '0.3em'
             });
 
-            ScrollTrigger.create({
+            const headingSt = ScrollTrigger.create({
                 trigger: geminiHeadingRef.current,
                 start: 'top 85%',
                 onEnter: () => {
@@ -418,6 +422,9 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                 },
                 once: true
             });
+            if (headingSt.progress > 0) {
+                gsap.set(geminiHeadingRef.current, { opacity: 1, scale: 1, letterSpacing: '0.02em' });
+            }
         }
 
         // Feature cards - each animates when it scrolls into view
@@ -430,7 +437,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     filter: 'blur(6px)'
                 });
 
-                ScrollTrigger.create({
+                const featureSt = ScrollTrigger.create({
                     trigger: ref.current,
                     start: 'top 90%',
                     onEnter: () => {
@@ -445,8 +452,14 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     },
                     once: true
                 });
+                if (featureSt.progress > 0) {
+                    gsap.set(ref.current, { opacity: 1, y: 0, filter: 'blur(0px)' });
+                }
             }
         });
+
+        // Force ScrollTrigger to recalculate positions after all setup
+        ScrollTrigger.refresh();
 
         return () => {
             ScrollTrigger.getAll().forEach(t => {
@@ -509,25 +522,28 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                             {/* Left Side - Title (RemindAR) - MOVED AFTER FRAME FOR Z-INDEX STACKING */}
                             <div
                                 ref={leftTextRef}
-                                className="absolute left-0 top-1/2 flex flex-col z-50"
+                                className="absolute top-1/2 flex flex-col z-50"
                                 style={{
-                                    transform: 'translateY(-50%) scale(0.79)',
+                                    left: 'max(-60px, min(0px, calc((100vw - 1440px) * 0.12)))',
+                                    transform: 'translateY(-50%)',
+                                    scale: 'clamp(0.2, calc(0.79 * 100vw / 1440), 0.79)',
                                     transformOrigin: 'left center',
                                     transformStyle: 'preserve-3d',
-                                    zIndex: 100 // Force higher z-index
+                                    zIndex: 100
                                 }}
                             >
                                 <span
                                     className="italic"
-                                    style={{ fontFamily: 'Mileast', color: '#9E6B30', fontSize: 'clamp(1rem, 1.7vw, 1.5rem)' }}
+                                    style={{ fontFamily: 'Mileast', color: '#9E6B30', fontSize: 'clamp(0.7rem, 1.7vw, 1.5rem)' }}
                                 >
                                     THIS IS
                                 </span>
                                 <h1
-                                    className="tracking-wide whitespace-nowrap -mt-12"
+                                    className="tracking-wide whitespace-nowrap"
                                     style={{
                                         fontFamily: 'Transcity',
-                                        fontSize: 'clamp(3.5rem, 11vw, 10rem)',
+                                        fontSize: 'clamp(2.5rem, 11vw, 10rem)',
+                                        marginTop: 'clamp(-3rem, -3.3vw, -0.5rem)',
                                         background: 'linear-gradient(180deg, #9E7B30 0%, #D8B64E 30%, #E8C85E 100%)',
                                         WebkitBackgroundClip: 'text',
                                         WebkitTextFillColor: 'transparent',
