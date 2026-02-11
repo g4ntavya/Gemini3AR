@@ -537,7 +537,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                             >
                                 <span
                                     className="italic"
-                                    style={{ fontFamily: 'Mileast', color: '#9E6B30', fontSize: isMobile ? '1.3rem' : 'clamp(0.7rem, 1.7vw, 1.5rem)' }}
+                                    style={{ fontFamily: 'Mileast', color: '#9E6B30', fontSize: isMobile ? '1.1rem' : 'clamp(0.7rem, 1.7vw, 1.5rem)' }}
                                 >
                                     THIS IS
                                 </span>
@@ -545,7 +545,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                     className="tracking-wide whitespace-nowrap"
                                     style={{
                                         fontFamily: 'Transcity',
-                                        fontSize: isMobile ? '21vw' : 'clamp(2.5rem, 11vw, 10rem)',
+                                        fontSize: isMobile ? '17vw' : 'clamp(2.5rem, 11vw, 10rem)',
                                         marginTop: isMobile ? '-1.5rem' : 'clamp(-3rem, -3.3vw, -0.5rem)',
                                         background: 'linear-gradient(180deg, #9E7B30 0%, #D8B64E 30%, #E8C85E 100%)',
                                         WebkitBackgroundClip: 'text',
@@ -601,64 +601,63 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                         {/* Inner Content Wrapper - Starts small (0.8), zooms up to 1 */}
                                         <div
                                             ref={innerContentRef}
-                                            className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center p-12 relative w-full h-full"
-                                            style={{ transformOrigin: 'center center' }} // GSAP triggers scale
+                                            className={`relative w-full h-full ${isMobile ? 'flex flex-col-reverse p-6 justify-center gap-4' : 'grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center p-12'}`}
+                                            style={{ transformOrigin: 'center center' }}
                                         >
                                             {/* Left Column - Text Content */}
-                                            <div className="space-y-6 md:space-y-8 relative z-10">
+                                            <div className={`relative z-10 ${isMobile ? 'text-center space-y-4' : 'space-y-6 md:space-y-8'}`}>
                                                 <h2
                                                     ref={contentTextRef}
-                                                    className="text-2xl sm:text-3xl md:text-4xl lg:text-[40px] leading-tight"
+                                                    className={`${isMobile ? 'text-[5.5vw] leading-tight' : 'text-2xl sm:text-3xl md:text-4xl lg:text-[40px] leading-tight'}`}
                                                     style={{ fontFamily: 'Moglan_DEMO', color: '#272728' }}
                                                 >
-                                                    <span className="underline decoration-2 underline-offset-4" style={{ textDecorationColor: '#272728' }}>RemindAR</span>{typedText.slice(8)}{!isTypingComplete && <span className="animate-pulse">|</span>}
+                                                    <span className="underline decoration-1 underline-offset-2" style={{ textDecorationColor: '#272728' }}>RemindAR</span>{typedText.slice(8)}{!isTypingComplete && <span className="animate-pulse">|</span>}
                                                 </h2>
 
-                                                <button
-                                                    ref={tryDemoButtonRef}
-                                                    onClick={onStartDemo}
-                                                    className="bg-remindar-button-brown text-remindar-button-text text-sm md:text-base px-6 py-3 hover:brightness-110 transition-all duration-300"
-                                                    style={{ fontFamily: 'Mileast', fontStyle: 'italic', opacity: 0 }}
-                                                >
-                                                    Try Demo
-                                                </button>
-                                                <p
-                                                    className="text-black text-[10px] sm:text-xs mt-2 opacity-0"
-                                                    style={{ fontFamily: 'HelveticaNeue-UltraLight', opacity: 0 }}
-                                                    ref={(el) => {
-                                                        if (el) {
-                                                            gsap.set(el, { opacity: 0, y: 10 });
-                                                            ScrollTrigger.create({
-                                                                trigger: el,
-                                                                start: 'top 95%',
-                                                                onEnter: () => {
-                                                                    gsap.to(el, {
-                                                                        opacity: 0.7,
-                                                                        y: 0,
-                                                                        duration: 0.5,
-                                                                        delay: 0.3,
-                                                                        ease: 'power2.out'
+                                                {/* Button hidden on mobile initially or styled differently? Keeping same but centered */}
+                                                {!isMobile && (
+                                                    <>
+                                                        <button
+                                                            ref={tryDemoButtonRef}
+                                                            onClick={onStartDemo}
+                                                            className="bg-remindar-button-brown text-remindar-button-text text-sm md:text-base px-6 py-3 hover:brightness-110 transition-all duration-300"
+                                                            style={{ fontFamily: 'Mileast', fontStyle: 'italic', opacity: 0 }}
+                                                        >
+                                                            Try Demo
+                                                        </button>
+                                                        <p
+                                                            className="text-black text-[10px] sm:text-xs mt-2 opacity-0"
+                                                            style={{ fontFamily: 'HelveticaNeue-UltraLight', opacity: 0 }}
+                                                            ref={(el) => {
+                                                                if (el && !isMobile) { // Only animate on desktop for now?
+                                                                    gsap.set(el, { opacity: 0, y: 10 });
+                                                                    ScrollTrigger.create({
+                                                                        trigger: el,
+                                                                        start: 'top 95%',
+                                                                        onEnter: () => {
+                                                                            gsap.to(el, { opacity: 0.7, y: 0, duration: 0.5, delay: 0.3, ease: 'power2.out' });
+                                                                        },
+                                                                        once: true
                                                                     });
-                                                                },
-                                                                once: true
-                                                            });
-                                                        }
-                                                    }}
-                                                >
-                                                    (camera and mic required)
-                                                </p>
+                                                                }
+                                                            }}
+                                                        >
+                                                            (camera and mic required)
+                                                        </p>
+                                                    </>
+                                                )}
                                             </div>
 
                                             {/* Right Column - Screenshot */}
-                                            <div className="relative z-10">
+                                            <div className={`relative z-10 ${isMobile ? 'w-full max-w-[80%] mx-auto' : ''}`}>
                                                 <img
                                                     src="/screenshot_first.png"
                                                     alt="Web demo preview"
-                                                    className="w-full h-auto"
+                                                    className="w-full h-auto shadow-sm"
                                                 />
                                                 <p
-                                                    className="text-black italic text-[9px] sm:text-xs mt-2 text-center"
-                                                    style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
+                                                    className="text-black italic text-[9px] sm:text-xs mt-1 text-center"
+                                                    style={{ fontFamily: 'HelveticaNeue-UltraLight', opacity: 0.6 }}
                                                 >
                                                     (Web demo preview)
                                                 </p>
@@ -676,14 +675,14 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         className="absolute z-20"
                         style={{
                             ...(isMobile
-                                ? { bottom: '14%', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
+                                ? { bottom: '15%', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
                                 : { right: '4rem', top: '50%', transform: 'translateY(-50%) scale(1.3)', transformOrigin: 'right center', textAlign: 'right' as const }
                             )
                         }}
                     >
                         <p
                             className="text-white leading-relaxed"
-                            style={{ fontFamily: 'HelveticaNeue-UltraLight', fontSize: isMobile ? '1.1rem' : undefined }}
+                            style={{ fontFamily: 'HelveticaNeue-UltraLight', fontSize: isMobile ? '0.95rem' : undefined }}
                         >
                             For the faces you'd have<br />
                             framed if you hadn't<br />
@@ -692,7 +691,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     </div>
 
                     {/* Bottom Text */}
-                    <div className="absolute left-0 right-0 z-20 text-center" style={{ bottom: isMobile ? '3%' : '2rem', padding: isMobile ? '0 1rem' : '0 2rem 2rem' }}>
+                    <div className="absolute left-0 right-0 z-20 text-center" style={{ bottom: isMobile ? '8%' : '2rem', padding: isMobile ? '0 1rem' : '0 2rem 2rem' }}>
                         <p
                             ref={bottomTextRef}
                             className="text-white text-center mx-auto leading-relaxed"
