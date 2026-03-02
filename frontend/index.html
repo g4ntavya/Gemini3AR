@@ -21,6 +21,12 @@
   <link rel="manifest" href="/manifest.json" />
   <meta name="description" content="RemindAR - AI-powered AR memory assistant" />
   <title>RemindAR - AR Memory Assistant</title>
+
+  <!-- Preload critical hero images for fast LCP -->
+  <link rel="preload" href="/bg_solid.png" as="image" media="(min-width: 768px)" />
+  <link rel="preload" href="/bg_solid_mobile.png" as="image" media="(max-width: 767px)" />
+  <link rel="preload" href="/framee.png" as="image" media="(min-width: 768px)" />
+  <link rel="preload" href="/frame_mobile.png" as="image" media="(max-width: 767px)" />
 </head>
 
 <body>

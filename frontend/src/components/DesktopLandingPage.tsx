@@ -8,6 +8,7 @@ import SplitText from './SplitText';
 
 // Register ScrollTrigger plugin
 gsap.registerPlugin(ScrollTrigger);
+ScrollTrigger.config({ ignoreMobileResize: true });
 
 interface LandingPageProps {
     onStartDemo: () => void;
@@ -153,7 +154,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                 start: 'top top',
                 end: '+=150%',
                 pin: true,
-                scrub: isMobile ? 0.1 : 0.5,
+                scrub: isMobile ? true : 0.5, // Use true (0 delay) for mobile to prevent interpolation jitter
                 invalidateOnRefresh: true,
             }
         });
@@ -341,7 +342,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                 start: 'top top',
                 end: '+=120%', // Reduced scroll area
                 pin: true,
-                scrub: isMobile ? 0.2 : 1.5, // Slower scrub on desktop, fast on mobile
+                scrub: isMobile ? true : 1.5, // Use true (0 delay) on mobile
                 onUpdate: (self) => {
                     const progress = self.progress;
 
@@ -470,7 +471,8 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
             {/* Scroll Wrapper for pinning */}
             <div ref={wrapperRef} className="relative">
                 {/* Hero Section - Green Background with Frame */}
-                <section ref={heroRef} className="relative w-full h-[100dvh] overflow-hidden" style={{ perspective: '1000px' }}>
+                {/* Replaced 100dvh with 100vh to prevent iOS mobile address-bar resize jitter */}
+                <section ref={heroRef} className="relative w-full h-[100vh] overflow-hidden" style={{ perspective: '1000px' }}>
                     {/* Dynamic SVG Background with Cutout Mask */}
                     {/* Background Image */}
                     <img
@@ -617,8 +619,9 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                                                 {/* Button and Paragraph - Visible on mobile now */}
                                                 <button
                                                     ref={tryDemoButtonRef}
-                                                    onClick={onStartDemo}
-                                                    className="bg-remindar-button-brown text-remindar-button-text text-[10px] sm:text-sm md:text-base px-4 py-2 md:px-6 md:py-3 hover:brightness-110 transition-all duration-300"
+                                                    onClick={(e) => { e.preventDefault(); onStartDemo(); }}
+                                                    onTouchEnd={(e) => { e.preventDefault(); onStartDemo(); }}
+                                                    className="bg-remindar-button-brown flex-shrink-0 text-remindar-button-text text-[10px] sm:text-sm md:text-base px-4 py-2 md:px-6 md:py-3 hover:brightness-110 transition-all duration-300 relative z-50 cursor-pointer"
                                                     style={{ fontFamily: 'Mileast', fontStyle: 'italic', opacity: 0 }}
                                                 >
                                                     Try Demo
@@ -667,7 +670,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     {/* Right Side - Text */}
                     <div
                         ref={rightTextRef}
-                        className="absolute z-20"
+                        className="absolute z-20 pointer-events-none"
                         style={{
                             ...(isMobile
                                 ? { bottom: 'calc(16% - 15px)', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
@@ -686,7 +689,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     </div>
 
                     {/* Bottom Text */}
-                    <div className="absolute left-0 right-0 z-20 text-center" style={{ bottom: isMobile ? '7%' : '2rem', padding: isMobile ? '0 1rem' : '0 2rem 2rem' }}>
+                    <div className="absolute left-0 right-0 z-20 text-center pointer-events-none" style={{ bottom: isMobile ? '7%' : '2rem', padding: isMobile ? '0 1rem' : '0 2rem 2rem' }}>
                         <p
                             ref={bottomTextRef}
                             className="text-white text-center mx-auto leading-relaxed"
@@ -707,7 +710,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
             {/* Features Section */}
             <section
                 ref={featuresSectionRef}
-                className="relative w-full py-12 md:py-16 lg:py-20 min-h-[100dvh] -mt-[1px]"
+                className="relative w-full py-12 md:py-16 lg:py-20 min-h-[100vh] -mt-[1px]"
                 style={{ backgroundColor: '#F5F0E8' }}
             >
                 {/* Grid Line Background SVG - Behind everything */}
