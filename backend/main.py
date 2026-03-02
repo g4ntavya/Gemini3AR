@@ -657,13 +657,7 @@ async def register_face(person_id: str, face_data: FaceData):
     """
     Register a face embedding for an existing person.
     Stores in both SQLite and Firestore for persistence.
-    Also stores a compressed face thumbnail for dashboard display.
     """
-    from database import update_face_image
-    import base64
-    import io
-    from PIL import Image
-    
     person = get_person(person_id)
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
@@ -674,43 +668,17 @@ async def register_face(person_id: str, face_data: FaceData):
     if embedding is None:
         raise HTTPException(status_code=400, detail="Could not extract face embedding")
     
-    # Save embedding to SQLite
+    # Save to SQLite
     success = update_embedding(person_id, embedding)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update embedding")
-    
-    # Compress face image to small thumbnail for dashboard (96x96, ~5KB)
-    face_thumbnail = face_data.image_base64
-    try:
-        # Remove data URL prefix if present
-        img_data = face_data.image_base64
-        if img_data.startswith('data:'):
-            img_data = img_data.split(',', 1)[1]
-        
-        # Decode, resize, and re-encode with higher compression
-        img_bytes = base64.b64decode(img_data)
-        img = Image.open(io.BytesIO(img_bytes))
-        img = img.convert('RGB')
-        img = img.resize((96, 96), Image.Resampling.LANCZOS)
-        
-        # Save with lower quality for smaller size
-        buffer = io.BytesIO()
-        img.save(buffer, format='JPEG', quality=60, optimize=True)
-        compressed_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        face_thumbnail = f"data:image/jpeg;base64,{compressed_b64}"
-        print(f"[API] Compressed thumbnail: {len(face_data.image_base64)} -> {len(face_thumbnail)} bytes")
-    except Exception as e:
-        print(f"[API] Thumbnail compression failed, using original: {e}")
-    
-    # Save face thumbnail to SQLite for dashboard display
-    update_face_image(person_id, face_thumbnail)
     
     # Add to local cache immediately
     updated_person = get_person(person_id)
     recognizer.add_to_cache(person_id, updated_person, embedding)
     
-    # Store embedding and face_thumbnail in Firestore for persistence
-    sync_embedding_to_firebase(person_id, embedding, face_thumbnail)
+    # Store embedding in Firestore for persistence
+    sync_embedding_to_firebase(person_id, embedding)
     
     # Broadcast for real-time update
     await broadcast_to_all({

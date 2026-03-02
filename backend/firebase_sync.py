@@ -118,23 +118,17 @@ def sync_person_to_firebase(person_data: Dict[str, Any], embedding: Optional[np.
         print(f"[Firebase] Sync error: {e}")
 
 
-def sync_embedding_to_firebase(person_id: str, embedding: np.ndarray, face_image: Optional[str] = None):
-    """Store face embedding and optionally face image in Firestore."""
+def sync_embedding_to_firebase(person_id: str, embedding: np.ndarray):
+    """Store face embedding in Firestore."""
     if not _initialized or not _db:
         return
     
     try:
-        update_data = {
+        _db.collection("people").document(person_id).update({
             "embedding": embedding.tolist(),
             "has_embedding": True,
             "updated_at": firestore.SERVER_TIMESTAMP,
-        }
-        
-        # Also store face_image if provided
-        if face_image:
-            update_data["face_image"] = face_image
-        
-        _db.collection("people").document(person_id).update(update_data)
+        })
         print(f"[Firebase] Stored embedding for: {person_id}")
         
         notify_update("embedding_added", {

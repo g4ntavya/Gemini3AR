@@ -153,12 +153,12 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                 start: 'top top',
                 end: '+=150%',
                 pin: true,
-                scrub: 0.5,
+                scrub: isMobile ? 0.1 : 0.5,
                 invalidateOnRefresh: true,
             }
         });
 
-        // Phase 1: RemindAR title fades out - FASTER and smooth
+        // Phase 1: RemindAR title fades out 
         const remindARTitle = leftText.querySelector('h1');
         const thisIsText = leftText.querySelector('span');
 
@@ -285,16 +285,14 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
         const tryDemoButton = tryDemoButtonRef.current;
         if (tryDemoButton) {
             gsap.set(tryDemoButton, {
-                opacity: 0,
+                autoAlpha: 0,
                 y: 10, // Subtle slide only
-                pointerEvents: 'none'
             });
 
             // Fast simple fade in
             tl.to(tryDemoButton, {
-                opacity: 1,
+                autoAlpha: 1,
                 y: 0,
-                pointerEvents: 'auto',
                 duration: 0.1, // Very fast relative to scroll
                 ease: 'power1.out'
             }, 0.3); // Start much earlier (was 0.6)
@@ -343,7 +341,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                 start: 'top top',
                 end: '+=120%', // Reduced scroll area
                 pin: true,
-                scrub: 1.5, // Slower scrub
+                scrub: isMobile ? 0.2 : 1.5, // Slower scrub on desktop, fast on mobile
                 onUpdate: (self) => {
                     const progress = self.progress;
 
@@ -519,7 +517,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                             {/* Left Side - Title (RemindAR) - MOVED AFTER FRAME FOR Z-INDEX STACKING */}
                             <div
                                 ref={leftTextRef}
-                                className="absolute flex flex-col z-50"
+                                className="absolute flex flex-col z-50 pointer-events-none"
                                 style={{
                                     top: isMobile ? '5%' : '50%',
                                     left: isMobile ? '0' : 'max(-60px, min(0px, calc((100vw - 1440px) * 0.12)))',
