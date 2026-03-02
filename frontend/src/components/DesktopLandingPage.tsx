@@ -90,14 +90,16 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
             x: xPos * 10,
             y: yPos * 10,
             duration: 0.8,
-            ease: 'power2.out'
+            ease: 'power2.out',
+            force3D: false
         });
 
         gsap.to(frameRef.current, {
             x: xPos * 8,
             y: yPos * 5,
             duration: 0.8,
-            ease: 'power2.out'
+            ease: 'power2.out',
+            force3D: false
         });
 
         if (bgContainerRef.current) {
@@ -105,7 +107,8 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                 x: xPos * 8, // Moves 1:1 with frame
                 y: yPos * 5,
                 duration: 0.8,
-                ease: 'power2.out'
+                ease: 'power2.out',
+                force3D: false
             });
         }
 
@@ -113,21 +116,24 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
             x: xPos * 20,
             y: yPos * 15,
             duration: 0.5,
-            ease: 'power2.out'
+            ease: 'power2.out',
+            force3D: false
         });
 
         gsap.to(bottomTextRef.current, {
             x: xPos * 20,
             y: yPos * 15,
             duration: 0.5,
-            ease: 'power2.out'
+            ease: 'power2.out',
+            force3D: false
         });
 
         gsap.to(leftTextRef.current, {
             x: xPos * 60,
             y: yPos * 40,
             duration: 0.4,
-            ease: 'power2.out'
+            ease: 'power2.out',
+            force3D: false
         });
     };
 
@@ -689,7 +695,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     </div>
 
                     {/* Bottom Text */}
-                    <div className="absolute left-0 right-0 z-20 text-center pointer-events-none" style={{ bottom: isMobile ? '7%' : '2rem', padding: isMobile ? '0 1rem' : '0 2rem 2rem' }}>
+                    <div className="absolute left-0 right-0 z-20 text-center pointer-events-none" style={{ bottom: isMobile ? '18%' : '7rem', padding: isMobile ? '0 1rem' : '0 2rem' }}>
                         <p
                             ref={bottomTextRef}
                             className="text-white text-center mx-auto leading-relaxed"
@@ -703,6 +709,28 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         >
                             Gemini powered assistant that helps people with memory challenges recognize loved ones and recall meaningful context.
                         </p>
+                    </div>
+
+                    {/* Scroll Down Indicator */}
+                    <div
+                        ref={(el) => {
+                            if (el && wrapperRef.current) {
+                                gsap.to(el, {
+                                    opacity: 0,
+                                    scrollTrigger: {
+                                        trigger: wrapperRef.current,
+                                        start: 'top top',
+                                        end: '+=5%', // Fade out almost instantly on scroll
+                                        scrub: true,
+                                    }
+                                });
+                            }
+                        }}
+                        className="absolute bottom-6 inset-x-0 mx-auto w-fit z-30 opacity-40 transition-opacity duration-500 pointer-events-none"
+                    >
+                        <svg className="animate-bounce" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M4 9l8 8 8-8" />
+                        </svg>
                     </div>
                 </section>
             </div>
