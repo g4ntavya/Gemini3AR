@@ -679,7 +679,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         className="absolute z-20 pointer-events-none"
                         style={{
                             ...(isMobile
-                                ? { bottom: 'calc(21% - 15px)', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
+                                ? { bottom: 'calc(19.5% - 15px)', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
                                 : { right: '4rem', top: '50%', transform: 'translateY(calc(-50% + 15px)) scale(1.3)', transformOrigin: 'right center', textAlign: 'right' as const }
                             )
                         }}
@@ -695,7 +695,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     </div>
 
                     {/* Bottom Text */}
-                    <div className="absolute left-0 right-0 z-20 text-center pointer-events-none" style={{ bottom: isMobile ? '13%' : '7rem', padding: isMobile ? '0 1rem' : '0 2rem' }}>
+                    <div className="absolute left-0 right-0 z-20 text-center pointer-events-none" style={{ bottom: isMobile ? '9.5%' : '7rem', padding: isMobile ? '0 1rem' : '0 2rem' }}>
                         <p
                             ref={bottomTextRef}
                             className="text-white text-center mx-auto leading-relaxed"
@@ -712,26 +712,29 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                     </div>
 
                     {/* Scroll Down Indicator */}
-                    <div
-                        ref={(el) => {
-                            if (el && wrapperRef.current) {
-                                gsap.to(el, {
-                                    opacity: 0,
-                                    scrollTrigger: {
-                                        trigger: wrapperRef.current,
-                                        start: 'top top',
-                                        end: '+=5%', // Fade out almost instantly on scroll
-                                        scrub: true,
-                                    }
-                                });
-                            }
-                        }}
-                        className="absolute bottom-16 inset-x-0 mx-auto w-fit z-30 opacity-40 transition-opacity duration-500 pointer-events-none"
-                    >
-                        <svg className="animate-bounce" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M4 9l8 8 8-8" />
-                        </svg>
-                    </div>
+                    {!isMobile && (
+                        <div
+                            ref={(el) => {
+                                if (el && wrapperRef.current) {
+                                    gsap.to(el, {
+                                        opacity: 0,
+                                        scrollTrigger: {
+                                            trigger: wrapperRef.current,
+                                            start: 'top top',
+                                            end: '+=5%', // Fade out almost instantly on scroll
+                                            scrub: true,
+                                        }
+                                    });
+                                }
+                            }}
+                            className="absolute inset-x-0 mx-auto w-fit z-30 opacity-40 transition-opacity duration-500 pointer-events-none"
+                            style={{ bottom: isMobile ? '10%' : '1rem' }}
+                        >
+                            <svg className="animate-bounce" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M4 9l8 8 8-8" />
+                            </svg>
+                        </div>
+                    )}
                 </section>
             </div>
 
