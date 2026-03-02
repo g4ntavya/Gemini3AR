@@ -679,7 +679,7 @@ export function LandingPage({ onStartDemo }: LandingPageProps) {
                         className="absolute z-20 pointer-events-none"
                         style={{
                             ...(isMobile
-                                ? { bottom: 'calc(16% - 15px)', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
+                                ? { bottom: 'calc(30% - 15px)', left: '50%', transform: 'translateX(-50%)', transformOrigin: 'center center', textAlign: 'center' as const, width: '90%' }
                                 : { right: '4rem', top: '50%', transform: 'translateY(calc(-50% + 15px)) scale(1.3)', transformOrigin: 'right center', textAlign: 'right' as const }
                             )
                         }}
