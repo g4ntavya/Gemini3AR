@@ -34,6 +34,7 @@ from database import (
     get_all_people,
     get_person,
     update_embedding,
+    update_face_image,
     delete_person
 )
 from face_recognition import get_recognizer
@@ -372,34 +373,12 @@ async def refresh_cache():
     }
 
 
-@app.post("/transcribe")
-async def transcribe_audio(audio_data: bytes = None):
-    """
-    Transcribe audio to text using local Whisper.
-    Accepts raw audio bytes (WAV format).
-    """
-    from speech_to_text import get_stt
-    from fastapi import Request
-    
-    # This endpoint needs to be handled differently for raw bytes
-    # We'll use a separate approach with UploadFile
-    pass
-
-
 from fastapi import File, UploadFile
 
 @app.post("/api/transcribe")
 async def api_transcribe(audio: UploadFile = File(...)):
     """
-    Transcribe uploaded audio file to text using Gemini.
-    
-    REPLACES: Whisper STT
-    
-    Benefits:
-    - Native Hindi/Hinglish support
-    - Better accuracy for mixed languages
-    - Cloud-based (no local model needed)
-    
+    Transcribe uploaded audio file to text using Gemini Flash.
     Accepts WAV, MP3, or WebM audio.
     """
     from gemini_stt import transcribe_and_extract_with_gemini
@@ -445,12 +424,8 @@ async def api_transcribe(audio: UploadFile = File(...)):
 async def api_transcribe_and_extract(audio: UploadFile = File(...)):
     """
     Transcribe audio AND extract structured info in ONE Gemini call.
-    
-    REPLACES: Whisper (transcription) + Phi-3 (extraction)
-    
-    This is the new primary endpoint for voice input.
-    Handles English, Hindi, Hinglish seamlessly.
-    
+    Primary endpoint for voice input. Handles English, Hindi, Hinglish seamlessly.
+
     Returns:
     - text: Full transcription
     - name: Extracted person name
@@ -513,10 +488,7 @@ class ExtractionRequest(BaseModel):
 @app.post("/api/extract")
 async def api_extract(request: ExtractionRequest):
     """
-    Extract structured info (name, relation, context) from text.
-    
-    Now uses Gemini for better multilingual and context understanding.
-    Falls back to Phi-3 if Gemini unavailable.
+    Extract structured info (name, relation, context) from text using Gemini.
     """
     from gemini_service import normalize_memory_with_gemini
     
@@ -534,18 +506,6 @@ async def api_extract(request: ExtractionRequest):
         relation=None,
         context=request.text  # Pass full text as context for extraction
     )
-    
-    # If Gemini didn't extract well, fall back to Phi
-    if not result.was_normalized or not any([result.name, result.relation]):
-        from llm_extraction import extract_info_async
-        phi_result = await extract_info_async(request.text)
-        return {
-            "name": phi_result.name,
-            "relation": phi_result.relation,
-            "context": phi_result.context,
-            "success": any([phi_result.name, phi_result.relation, phi_result.context]),
-            "source": "phi"
-        }
     
     return {
         "name": result.name,
@@ -673,6 +633,9 @@ async def register_face(person_id: str, face_data: FaceData):
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update embedding")
     
+    # Store the face image (base64) for dashboard display
+    update_face_image(person_id, face_data.image_base64)
+    
     # Add to local cache immediately
     updated_person = get_person(person_id)
     recognizer.add_to_cache(person_id, updated_person, embedding)
@@ -793,71 +756,30 @@ async def summarize_conversation(request: ConversationSummaryRequest):
 
 
 @app.post("/api/extract-normalized")
-async def extract_and_normalize(request: ExtractionRequest, normalize: bool = True):
+async def extract_and_normalize(request: ExtractionRequest):
     """
-    Extract structured info AND optionally normalize with Gemini.
-    
-    This is an enhanced version of /api/extract that adds Gemini normalization.
-    
-    FLOW:
-    1. Phi-3 extracts raw slots (fast, <2 seconds)
-    2. If normalize=True, Gemini cleans up the result:
-       - Capitalizes names properly
-       - Standardizes relation labels
-       - Shortens context to ≤8 words
-    
-    WHY GEMINI for normalization:
-    - Phi-3 outputs raw text that may be lowercase or inconsistent
-    - Gemini provides semantic understanding for cleanup
-    - Still fast because Phi does the heavy lifting first
+    Extract and normalize structured info (name, relation, context) from text using Gemini.
     """
-    from llm_extraction import extract_info_async
-    
-    # Step 1: Fast Phi-3 extraction (realtime-safe)
-    phi_result = await extract_info_async(request.text)
-    
-    if not normalize:
-        # Return raw Phi result
-        return {
-            "name": phi_result.name,
-            "relation": phi_result.relation,
-            "context": phi_result.context,
-            "success": any([phi_result.name, phi_result.relation, phi_result.context]),
-            "normalized": False
-        }
-    
-    # Step 2: Gemini normalization (reflection-safe)
-    print(f"[Gemini] Normalizing extraction: {phi_result.name}, {phi_result.relation}")
-    normalized = await normalize_memory_with_gemini(
-        phi_result.name,
-        phi_result.relation,
-        phi_result.context
+    result = await normalize_memory_with_gemini(
+        name=None,
+        relation=None,
+        context=request.text
     )
-    
     return {
-        "name": normalized.name,
-        "relation": normalized.relation,
-        "context": normalized.context,
-        "success": any([normalized.name, normalized.relation, normalized.context]),
-        "normalized": normalized.was_normalized,
-        "source": "gemini_flash" if normalized.was_normalized else "phi_only"
+        "name": result.name,
+        "relation": result.relation,
+        "context": result.context,
+        "success": any([result.name, result.relation, result.context]),
+        "normalized": result.was_normalized,
+        "source": "gemini"
     }
 
 
 @app.post("/api/translate-summarize")
 async def translate_and_summarize(request: TranslateRequest):
     """
-    Translate and summarize non-English or mixed-language text.
-    
-    TRIGGER: When Whisper detects non-English or mixed language input.
-    
-    WHY GEMINI:
-    - Phi-3 is optimized for English extraction only
-    - Local translation is slow and unreliable
-    - Gemini handles Hindi, Hinglish (Hindi+English mix), and other languages
-    
-    FLOW:
-    Whisper (detects non-English) → This endpoint → Clean English summary
+    Translate and summarize non-English or mixed-language text using Gemini.
+    Handles Hindi, Hinglish (Hindi+English mix), and other languages.
     """
     if not request.text or not request.text.strip():
         return {"summary": "", "success": False, "error": "Empty text"}
@@ -892,7 +814,6 @@ async def get_dashboard_insights(days: int = 7, person_id: Optional[str] = None)
     ONLY for dashboard - NEVER in live AR overlay.
     
     WHY GEMINI:
-    - Dashboard requires high-level reasoning that Phi-3 can't do
     - Aggregates patterns across multiple memories
     - Identifies common topics/themes
     - Generates natural language summaries
@@ -944,7 +865,7 @@ async def add_conversation_line(session_id: str, text: str, person_name: Optiona
     This is used to track ongoing conversations for later summarization.
     The buffer is used by /api/summarize-conversation when triggered.
     
-    Call this after each Whisper transcription in the frontend.
+    Call this after each Gemini transcription in the frontend.
     """
     if session_id not in conversation_sessions:
         conversation_sessions[session_id] = ConversationSession()

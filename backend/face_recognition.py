@@ -44,7 +44,7 @@ class FaceRecognizer:
         
         try:
             self.model = FaceAnalysis(
-                name="buffalo_l",
+                name="buffalo_s",
                 providers=["CPUExecutionProvider"]
             )
             self.model.prepare(ctx_id=0, det_size=(320, 320))

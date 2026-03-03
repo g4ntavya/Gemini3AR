@@ -16,7 +16,3 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # Gemini model to use - Gemini 3 Flash
 GEMINI_MODEL = "gemini-3-flash-preview"
-
-# Ollama configuration (kept as fallback)
-OLLAMA_URL = "http://localhost:11434/api/generate"
-PHI_MODEL = "phi3:mini"

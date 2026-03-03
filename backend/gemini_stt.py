@@ -1,5 +1,6 @@
 """
 Gemini Speech-to-Text + Extraction Service
+Uses shared gemini_client for non-blocking, singleton model calls.
 """
 
 import base64
@@ -8,12 +9,7 @@ import re
 from typing import Optional
 from dataclasses import dataclass
 
-import google.generativeai as genai
-
-from config import GEMINI_API_KEY, GEMINI_MODEL
-
-# Configure the API
-genai.configure(api_key=GEMINI_API_KEY)
+from gemini_client import call_gemini
 
 
 @dataclass
@@ -27,147 +23,114 @@ class TranscriptionResult:
     success: bool = True
 
 
+# ── Prompt (kept concise — examples are the best guidance for Gemini) ──
+
+_STT_EXTRACT_PROMPT = """Listen to this audio and respond with JSON only (no markdown).
+
+Tasks:
+1. TRANSCRIBE exactly what was said. Hindi/Hinglish → Roman letters, not Devanagari.
+2. EXTRACT if mentioned: name (proper noun), relation (Friend/Family/Brother/Sister/Doctor/Colleague/Neighbor/Other), context (≤10 words, English).
+
+Examples:
+- "Yeh mera college friend Arjun hai" → {"transcription":"Yeh mera college friend Arjun hai","language":"hinglish","name":"Arjun","relation":"Friend","context":"college friend"}
+- "This is my sister Priya, she lives in Delhi" → {"transcription":"This is my sister Priya, she lives in Delhi","language":"en","name":"Priya","relation":"Sister","context":"lives in Delhi"}
+- "Amit bhai doctor hai" → {"transcription":"Amit bhai doctor hai","language":"hinglish","name":"Amit","relation":"Brother","context":"is a doctor"}
+
+JSON format:
+{"transcription":"...","language":"en|hi|hinglish","name":"extracted or null","relation":"extracted or null","context":"extracted or null"}"""
+
+_STT_ONLY_PROMPT = """Transcribe this audio exactly as spoken. Hindi/Hinglish → Roman letters. Output ONLY the transcription text, nothing else."""
+
+
+def _clean(val):
+    """Return None for null-ish values."""
+    return None if val in (None, "null", "") else val
+
+
+def _parse_stt_response(raw: str) -> TranscriptionResult:
+    """Parse JSON from Gemini STT response."""
+    # Try direct JSON parse first (fast path)
+    parsed = None
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        # Fallback: extract JSON object from surrounding text
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
+        if match:
+            try:
+                parsed = json.loads(match.group(0))
+            except json.JSONDecodeError:
+                pass
+
+    # If JSON parsing failed entirely, try to salvage the transcription text
+    if parsed is None:
+        # Try to extract partial transcription from truncated JSON
+        trans_match = re.search(r'"transcription"\s*:\s*"([^"]+)', raw)
+        if trans_match:
+            return TranscriptionResult(text=trans_match.group(1).strip(), success=True)
+        # Last resort: if it looks like JSON, don't show it raw
+        if raw.lstrip().startswith('{'):
+            return TranscriptionResult(text='', success=False)
+        return TranscriptionResult(text=raw, success=True)
+
+    transcription = parsed.get("transcription", raw)
+    name = _clean(parsed.get("name"))
+    relation = _clean(parsed.get("relation"))
+    context = _clean(parsed.get("context"))
+    language = parsed.get("language", "en")
+
+    return TranscriptionResult(
+        text=transcription,
+        name=name.title() if name else None,
+        relation=relation.title() if relation else None,
+        context=context,
+        language=language,
+        success=True,
+    )
+
+
 async def transcribe_and_extract_with_gemini(
     audio_data: bytes,
-    mime_type: str = "audio/webm"
+    mime_type: str = "audio/webm",
 ) -> TranscriptionResult:
     """
     Transcribe audio and extract structured info using Gemini Flash.
+    Single API call — non-blocking, with timeout.
     """
-    if not GEMINI_API_KEY:
-        print("[Gemini STT] API key not configured")
-        return TranscriptionResult(text="", success=False)
-    
     if not audio_data:
         return TranscriptionResult(text="", success=False)
-    
-    # Build prompt for transcription + extraction
-    prompt = """Listen to this audio carefully and do TWO things:
 
-1. TRANSCRIBE: Write EXACTLY what was said. 
-   - If Hindi/Hinglish, write in ROMAN LETTERS (not Devanagari)
-   - Example: "Yeh mera bhai / @dost Rahul hai" NOT "यह मेरा भाई राहुल है"
-   - Preserve the original language mixing (English+Hindi words together)
-
-2. EXTRACT: From the transcription, find these fields if mentioned:
-   - name: The person's name being talked about (proper noun)
-   - relation: Their relationship (Friend, Family, Brother, Sister, Doctor, Colleague, Neighbor, etc.)
-   - context: A brief memory/fact about them (max 10 words)
-
-EXAMPLES:
-- Audio: "Yeh mera college friend Arjun hai" → name="Arjun", relation="Friend", context="college friend"
-- Audio: "This is my sister Priya, she lives in Delhi" → name="Priya", relation="Sister", context="lives in Delhi"
-- Audio: "Amit bhai doctor hai" → name="Amit", relation="Brother", context="is a doctor"
-
-IMPORTANT: 
-- Transcribe Hindi words phonetically in Roman script
-- Extract fields in ENGLISH even if audio is in Hindi
-
-Respond ONLY with this JSON (no markdown):
-{
-  "transcription": "exact words in romanized form",
-  "language": "en" or "hi" or "hinglish",
-  "name": "extracted name or null",
-  "relation": "extracted relation or null",
-  "context": "brief context or null"
-}"""
-
-    try:
-        # Create model
-        model = genai.GenerativeModel(GEMINI_MODEL)
-        
-        # Create audio part
-        audio_part = {
-            "inline_data": {
-                "mime_type": mime_type,
-                "data": base64.b64encode(audio_data).decode('utf-8')
-            }
+    audio_part = {
+        "inline_data": {
+            "mime_type": mime_type,
+            "data": base64.b64encode(audio_data).decode("utf-8"),
         }
-        
-        # Generate response
-        response = model.generate_content([prompt, audio_part])
-        
-        raw_text = response.text.strip()
-        print(f"[Gemini STT] Raw response: {raw_text[:200]}")
-        
-        # Parse JSON from response
-        json_match = re.search(r'\{[^{}]*\}', raw_text, re.DOTALL)
-        if not json_match:
-            # If no JSON, treat entire response as transcription
-            return TranscriptionResult(
-                text=raw_text,
-                success=True
-            )
-        
-        parsed = json.loads(json_match.group(0))
-        
-        # Extract fields
-        transcription = parsed.get("transcription", raw_text)
-        name = parsed.get("name")
-        relation = parsed.get("relation")
-        context = parsed.get("context")
-        language = parsed.get("language", "en")
-        
-        # Clean null values
-        if name in [None, "null", ""]: name = None
-        if relation in [None, "null", ""]: relation = None
-        if context in [None, "null", ""]: context = None
-        
-        # Normalize relation if present
-        if relation:
-            relation = relation.title()
-        
-        # Normalize name if present
-        if name:
-            name = name.title()
-        
-        result = TranscriptionResult(
-            text=transcription,
-            name=name,
-            relation=relation,
-            context=context,
-            language=language,
-            success=True
-        )
-        
-        print(f"[Gemini STT] Result: text='{transcription[:50]}...', name={name}, relation={relation}")
-        return result
-        
-    except json.JSONDecodeError as e:
-        print(f"[Gemini STT] JSON parse error: {e}")
+    }
+
+    raw = await call_gemini([_STT_EXTRACT_PROMPT, audio_part], timeout=12.0)
+
+    if not raw:
         return TranscriptionResult(text="", success=False)
-    except Exception as e:
-        print(f"[Gemini STT] Error: {e}")
-        return TranscriptionResult(text="", success=False)
+
+    print(f"[Gemini STT] Raw response: {raw[:200]}")
+    result = _parse_stt_response(raw)
+    print(f"[Gemini STT] text='{result.text[:50]}', name={result.name}, relation={result.relation}")
+    return result
 
 
 async def transcribe_only_with_gemini(
     audio_data: bytes,
-    mime_type: str = "audio/webm"
+    mime_type: str = "audio/webm",
 ) -> Optional[str]:
-    """
-    Simple transcription without extraction.
-    """
-    if not GEMINI_API_KEY or not audio_data:
+    """Simple transcription without extraction."""
+    if not audio_data:
         return None
-    
-    prompt = """Transcribe this audio exactly as spoken. 
-The audio may be in English, Hindi, or mixed. 
-Output ONLY the transcription, nothing else."""
 
-    try:
-        model = genai.GenerativeModel(GEMINI_MODEL)
-        
-        audio_part = {
-            "inline_data": {
-                "mime_type": mime_type,
-                "data": base64.b64encode(audio_data).decode('utf-8')
-            }
+    audio_part = {
+        "inline_data": {
+            "mime_type": mime_type,
+            "data": base64.b64encode(audio_data).decode("utf-8"),
         }
-        
-        response = model.generate_content([prompt, audio_part])
-        return response.text.strip()
-        
-    except Exception as e:
-        print(f"[Gemini STT] Error: {e}")
-        return None
+    }
+
+    return await call_gemini([_STT_ONLY_PROMPT, audio_part], timeout=10.0)

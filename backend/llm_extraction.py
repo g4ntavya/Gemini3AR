@@ -1,16 +1,7 @@
 """
-Fast LLM Extraction using Ollama + Phi-3
-Optimized for <2 second response
+DEPRECATED: Replaced by gemini_stt.py and gemini_service.py (Gemini Flash).
+This file is no longer imported or used.
 """
-
-import httpx
-import json
-import re
-from dataclasses import dataclass
-from typing import Optional
-
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "phi3:mini"  # Smaller, faster model
 
 # Ultra-minimal prompt
 PROMPT = '''JSON only: {{"name":"X","relation":"Y","context":"Z"}}

@@ -1,20 +1,7 @@
 """
-Speech-to-Text module using faster-whisper.
-Provides local transcription without cloud APIs.
+DEPRECATED: Replaced by gemini_stt.py (Gemini Flash STT + extraction).
+This file is no longer imported or used.
 """
-
-import tempfile
-import os
-from pathlib import Path
-from typing import Optional
-
-# Try to import faster-whisper
-try:
-    from faster_whisper import WhisperModel
-    WHISPER_AVAILABLE = True
-except ImportError:
-    WHISPER_AVAILABLE = False
-    print("[STT] faster-whisper not installed")
 
 
 class SpeechToText:
