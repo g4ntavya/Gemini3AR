@@ -14,6 +14,12 @@ from config import GEMINI_API_KEY, GEMINI_MODEL
 # Configure once at module load
 genai.configure(api_key=GEMINI_API_KEY)
 
+# Pre-built config reused on every call (avoids per-call object creation)
+_DEFAULT_GEN_CONFIG = genai.GenerationConfig(
+    temperature=0.1,
+    candidate_count=1,
+)
+
 # Single model instance — reused by all callers
 _model: Optional[genai.GenerativeModel] = None
 
@@ -24,10 +30,7 @@ def get_model() -> genai.GenerativeModel:
     if _model is None:
         _model = genai.GenerativeModel(
             GEMINI_MODEL,
-            generation_config=genai.GenerationConfig(
-                temperature=0.1,
-                candidate_count=1,
-            ),
+            generation_config=_DEFAULT_GEN_CONFIG,
         )
     return _model
 
@@ -59,20 +62,14 @@ async def call_gemini(
     loop = asyncio.get_event_loop()
 
     def _blocking_call() -> str:
-        gen_config = genai.GenerationConfig(
-            temperature=0.1,
-            candidate_count=1,
-        )
+        config = _DEFAULT_GEN_CONFIG
         if max_output_tokens > 0:
-            gen_config = genai.GenerationConfig(
+            config = genai.GenerationConfig(
                 temperature=0.1,
                 candidate_count=1,
                 max_output_tokens=max_output_tokens,
             )
-        response = model.generate_content(
-            prompt,
-            generation_config=gen_config,
-        )
+        response = model.generate_content(prompt, generation_config=config)
         return response.text.strip()
 
     try:

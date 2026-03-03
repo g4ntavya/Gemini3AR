@@ -12,6 +12,7 @@ Handles:
 import json
 import asyncio
 import time
+import uuid
 from typing import Dict, Set, List, Optional
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -308,8 +309,11 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 print(f"[WS] Processing face: {track_id[:20]}...")
                 
-                # Run recognition
-                person, confidence, embedding = recognizer.recognize(image_base64)
+                # Run recognition in thread pool (avoids blocking event loop)
+                loop = asyncio.get_event_loop()
+                person, confidence, embedding = await loop.run_in_executor(
+                    None, recognizer.recognize, image_base64
+                )
                 
                 # Log result
                 name = person.get("name", "Unknown") if person else "Unknown"
@@ -374,51 +378,6 @@ async def refresh_cache():
 
 
 from fastapi import File, UploadFile
-
-@app.post("/api/transcribe")
-async def api_transcribe(audio: UploadFile = File(...)):
-    """
-    Transcribe uploaded audio file to text using Gemini Flash.
-    Accepts WAV, MP3, or WebM audio.
-    """
-    from gemini_stt import transcribe_and_extract_with_gemini
-    
-    # Read audio data
-    audio_bytes = await audio.read()
-    
-    # Determine MIME type
-    mime_type = audio.content_type or "audio/webm"
-    if audio.filename:
-        if audio.filename.endswith(".wav"):
-            mime_type = "audio/wav"
-        elif audio.filename.endswith(".mp3"):
-            mime_type = "audio/mp3"
-        elif audio.filename.endswith(".webm"):
-            mime_type = "audio/webm"
-    
-    print(f"[API] Transcribing audio: {len(audio_bytes)} bytes, type: {mime_type}")
-    
-    # Transcribe AND extract with Gemini (single call)
-    result = await transcribe_and_extract_with_gemini(audio_bytes, mime_type)
-    
-    if not result.success:
-        return {
-            "text": "",
-            "success": False,
-            "error": "Gemini transcription failed"
-        }
-    
-    return {
-        "text": result.text,
-        "success": True,
-        "language": result.language,
-        # Also return extracted fields for convenience
-        "name": result.name,
-        "relation": result.relation,
-        "context": result.context,
-        "source": "gemini"
-    }
-
 
 @app.post("/api/transcribe-and-extract")
 async def api_transcribe_and_extract(audio: UploadFile = File(...)):
@@ -540,7 +499,6 @@ async def create_person(person: PersonCreate):
     Create a new person entry.
     Note: Embedding must be added separately via /register-face endpoint.
     """
-    import uuid
     person_id = f"person_{uuid.uuid4().hex[:8]}"
     
     success = add_person(
@@ -867,6 +825,13 @@ async def add_conversation_line(session_id: str, text: str, person_name: Optiona
     
     Call this after each Gemini transcription in the frontend.
     """
+    # Clean up stale sessions (older than 30 minutes)
+    stale_cutoff = time.time() - 1800
+    stale_ids = [sid for sid, s in conversation_sessions.items()
+                 if s.last_speech_time > 0 and s.last_speech_time < stale_cutoff]
+    for sid in stale_ids:
+        del conversation_sessions[sid]
+
     if session_id not in conversation_sessions:
         conversation_sessions[session_id] = ConversationSession()
     

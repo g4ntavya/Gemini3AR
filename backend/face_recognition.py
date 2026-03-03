@@ -145,7 +145,7 @@ class FaceRecognizer:
     def get_embedding(self, image: np.ndarray) -> Optional[np.ndarray]:
         """Generate face embedding."""
         if self.model is None:
-            return np.random.randn(512).astype(np.float32)
+            return None
         
         try:
             faces = self.model.get(image)
@@ -170,19 +170,18 @@ class FaceRecognizer:
         return float(np.dot(emb1_norm, emb2_norm))
     
     def find_match(self, query_embedding: np.ndarray) -> Tuple[Optional[dict], float]:
-        """Find best match from cache."""
+        """Find best match above threshold from cache."""
         if not self._cache:
             return None, 0.0
         
         best_match = None
-        best_score = -1.0
+        best_score = 0.0
         
         for person_id, (person, embedding) in self._cache.items():
             score = self.compute_similarity(query_embedding, embedding)
-            if score > best_score:
+            if score >= self.SIMILARITY_THRESHOLD and score > best_score:
                 best_score = score
-                if score >= self.SIMILARITY_THRESHOLD:
-                    best_match = person
+                best_match = person
         
         return best_match, best_score
     

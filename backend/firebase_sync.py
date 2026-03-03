@@ -94,6 +94,11 @@ def sync_person_to_firebase(person_data: Dict[str, Any], embedding: Optional[np.
             "updated_at": firestore.SERVER_TIMESTAMP,  # Sentinel for Firestore
         }
         
+        # Include face image for cross-device sync
+        face_img = person_data.get("face_image")
+        if face_img:
+            doc_data["face_image"] = face_img
+        
         # Store embedding as list of floats
         if embedding is not None:
             doc_data["embedding"] = embedding.tolist()
