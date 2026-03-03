@@ -78,6 +78,9 @@ conversation_sessions: Dict[str, ConversationSession] = {}
 # Silence threshold for triggering Gemini summary (seconds)
 SILENCE_THRESHOLD_SECONDS = 5.0
 
+# Main event loop reference — set at startup, used by broadcast_update from threads
+_main_loop: Optional[asyncio.AbstractEventLoop] = None
+
 
 # ============================================================================
 # Application Lifecycle
@@ -90,6 +93,10 @@ async def lifespan(app: FastAPI):
     Flow: Firestore → SQLite → In-Memory Cache
     """
     print("[Server] Starting RemindAR backend...")
+    
+    # Capture main event loop for thread-safe broadcasts
+    global _main_loop
+    _main_loop = asyncio.get_running_loop()
     
     # Initialize database
     init_database()
@@ -192,22 +199,24 @@ manager = ConnectionManager()
 
 # Broadcast function for Firebase sync updates
 def broadcast_update(event_type: str, data: dict):
-    """Broadcast an update to all connected WebSocket clients."""
+    """Broadcast an update to all connected WebSocket clients.
+    
+    Called from Firebase listener threads — uses run_coroutine_threadsafe
+    to safely schedule on the main event loop.
+    """
     message = {
         "type": "sync_update",
         "event": event_type,
         "data": data
     }
     
-    # Run async broadcast in event loop
+    if _main_loop is None or _main_loop.is_closed():
+        return
+    
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            asyncio.create_task(broadcast_to_all(message))
-        else:
-            loop.run_until_complete(broadcast_to_all(message))
+        asyncio.run_coroutine_threadsafe(broadcast_to_all(message), _main_loop)
     except RuntimeError:
-        # No event loop, skip broadcast
+        # Loop shut down, skip broadcast
         pass
 
 
@@ -318,6 +327,11 @@ async def websocket_endpoint(websocket: WebSocket):
                 # Log result
                 name = person.get("name", "Unknown") if person else "Unknown"
                 print(f"[WS] Recognized: {name} ({confidence:.2f})")
+                
+                # Backfill face_image if person exists but has no photo yet
+                if person and confidence > 0.55 and not person.get("face_image"):
+                    update_face_image(person["id"], image_base64)
+                    person["face_image"] = image_base64  # update local copy too
                 
                 # Build and send result
                 result = build_recognition_result(track_id, person, confidence)
@@ -581,7 +595,12 @@ async def register_face(person_id: str, face_data: FaceData):
         raise HTTPException(status_code=404, detail="Person not found")
     
     recognizer = get_recognizer()
-    embedding = recognizer.get_embedding_from_base64(face_data.image_base64)
+    
+    # Run InsightFace inference in thread pool (avoids blocking event loop)
+    loop = asyncio.get_running_loop()
+    embedding = await loop.run_in_executor(
+        None, recognizer.get_embedding_from_base64, face_data.image_base64
+    )
     
     if embedding is None:
         raise HTTPException(status_code=400, detail="Could not extract face embedding")
@@ -598,8 +617,9 @@ async def register_face(person_id: str, face_data: FaceData):
     updated_person = get_person(person_id)
     recognizer.add_to_cache(person_id, updated_person, embedding)
     
-    # Store embedding in Firestore for persistence
+    # Store embedding + face_image in Firestore for persistence
     sync_embedding_to_firebase(person_id, embedding)
+    sync_person_to_firebase(updated_person)
     
     # Broadcast for real-time update
     await broadcast_to_all({

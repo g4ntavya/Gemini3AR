@@ -18,8 +18,8 @@ const LERP_FACTOR = 0.3;
 // Increased to 1500ms to bridge short occlusions (covering face, looking away)
 const FACE_TIMEOUT = 1500;
 
-// Detection interval (ms) - increased for better performance
-const DETECTION_INTERVAL = 200;
+// Detection interval (ms) - 300ms = ~3.3 fps, good balance of responsiveness vs CPU
+const DETECTION_INTERVAL = 300;
 
 interface UseFaceDetectionReturn {
     faces: Map<string, TrackedFace>;

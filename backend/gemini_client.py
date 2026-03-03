@@ -59,7 +59,7 @@ async def call_gemini(
         return None
 
     model = get_model()
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     def _blocking_call() -> str:
         config = _DEFAULT_GEN_CONFIG

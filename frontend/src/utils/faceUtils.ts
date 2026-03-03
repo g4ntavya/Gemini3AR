@@ -52,6 +52,19 @@ export function bboxDistance(a: BoundingBox, b: BoundingBox): number {
     );
 }
 
+// Module-level reusable canvas to avoid GC churn (~15 crops/sec)
+let _cropCanvas: HTMLCanvasElement | null = null;
+let _cropCtx: CanvasRenderingContext2D | null = null;
+
+function getCropCanvas(): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null {
+    if (!_cropCanvas) {
+        _cropCanvas = document.createElement('canvas');
+        _cropCtx = _cropCanvas.getContext('2d');
+    }
+    if (!_cropCtx) return null;
+    return { canvas: _cropCanvas, ctx: _cropCtx };
+}
+
 /**
  * Crop a face region from a video element
  * Returns base64-encoded JPEG
@@ -65,9 +78,9 @@ export function cropFaceFromVideo(
         return null;
     }
 
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
+    const pair = getCropCanvas();
+    if (!pair) return null;
+    const { canvas, ctx } = pair;
 
     // Calculate pixel coordinates with padding
     const videoWidth = video.videoWidth;
@@ -91,8 +104,8 @@ export function cropFaceFromVideo(
     width = Math.min(width, videoWidth - x);
     height = Math.min(height, videoHeight - y);
 
-    // Set canvas size - use 512px for better face recognition
-    const maxSize = 512;
+    // Set canvas size - 160px is enough; InsightFace resizes to 112x112 internally
+    const maxSize = 160;
     const scale = Math.min(maxSize / width, maxSize / height, 1);
     canvas.width = Math.round(width * scale);
     canvas.height = Math.round(height * scale);
@@ -104,8 +117,8 @@ export function cropFaceFromVideo(
         0, 0, canvas.width, canvas.height
     );
 
-    // Convert to base64 JPEG with good quality
-    return canvas.toDataURL('image/jpeg', 0.9);
+    // Convert to base64 JPEG — 0.7 quality is plenty for recognition
+    return canvas.toDataURL('image/jpeg', 0.7);
 }
 
 /**

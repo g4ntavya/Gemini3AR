@@ -20,7 +20,7 @@ DB_PATH = Path(__file__).parent / "remindar.db"
 def get_connection() -> sqlite3.Connection:
     """Get a thread-local database connection."""
     if not hasattr(_local, "connection"):
-        _local.connection = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        _local.connection = sqlite3.connect(str(DB_PATH))
         _local.connection.row_factory = sqlite3.Row
     return _local.connection
 
@@ -112,7 +112,7 @@ def update_person(
     
     cursor.execute("""
         UPDATE people 
-        SET name = ?, relation = ?, last_met = ?, context = ?
+        SET name = ?, relation = ?, last_met = ?, context = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
     """, (name, relation, last_met, context, person_id))
     conn.commit()
@@ -210,6 +210,15 @@ def get_all_people() -> List[dict]:
     return [dict(row) for row in cursor.fetchall()]
 
 
+def get_all_people_lightweight() -> List[dict]:
+    """Get all people without face_image or embedding (for prompt context)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT id, name, relation, last_met, context FROM people")
+    return [dict(row) for row in cursor.fetchall()]
+
+
 def delete_person(person_id: str) -> bool:
     """Delete a person by ID."""
     conn = get_connection()
@@ -284,42 +293,49 @@ def clear_all_people():
 def sync_from_firestore(firestore_people: list):
     """
     Sync people from Firestore to SQLite.
-    Clears existing data and replaces with Firestore data.
+    Uses a single transaction so crash mid-sync won't lose data.
     """
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Clear existing data
-    cursor.execute("DELETE FROM people")
-    
-    synced = 0
-    for person in firestore_people:
-        person_id = person.get("id")
-        if not person_id:
-            continue
-            
-        # Get embedding if available
-        embedding_json = None
-        if "embedding" in person and person["embedding"]:
-            embedding_json = json.dumps(person["embedding"])
+    try:
+        cursor.execute("BEGIN IMMEDIATE")
         
-        cursor.execute("""
-            INSERT OR REPLACE INTO people (id, name, relation, last_met, context, embedding, face_image)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            person_id,
-            person.get("name", ""),
-            person.get("relation", ""),
-            person.get("last_met", ""),
-            person.get("context", ""),
-            embedding_json,
-            person.get("face_image", None)
-        ))
-        synced += 1
-    
-    conn.commit()
-    print(f"[DB] Synced {synced} people from Firestore to SQLite")
-    return synced
+        # Clear existing data
+        cursor.execute("DELETE FROM people")
+        
+        synced = 0
+        for person in firestore_people:
+            person_id = person.get("id")
+            if not person_id:
+                continue
+                
+            # Get embedding if available
+            embedding_json = None
+            if "embedding" in person and person["embedding"]:
+                embedding_json = json.dumps(person["embedding"])
+            
+            cursor.execute("""
+                INSERT OR REPLACE INTO people (id, name, relation, last_met, context, embedding, face_image)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                person_id,
+                person.get("name", ""),
+                person.get("relation", ""),
+                person.get("last_met", ""),
+                person.get("context", ""),
+                embedding_json,
+                person.get("face_image", None)
+            ))
+            synced += 1
+        
+        conn.commit()
+        print(f"[DB] Synced {synced} people from Firestore to SQLite")
+        return synced
+    except Exception as e:
+        conn.rollback()
+        print(f"[DB] Firestore sync failed, rolled back: {e}")
+        raise
 
 
 # Initialize on import

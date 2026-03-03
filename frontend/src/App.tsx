@@ -15,12 +15,12 @@ import { GeminiResponseOverlay } from './components/GeminiResponseOverlay';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useFaceDetection } from './hooks/useFaceDetection';
 import { cropFaceFromVideo } from './utils/faceUtils';
-import { Person } from './types';
+import { Person, TrackedFace } from './types';
 import { API } from './config/api';
 import { killAllStreams } from './utils/mediaStreamTracker';
 
-// Recognition settings 
-const RECOGNITION_INTERVAL = 200; // Faster recognition (was 500)
+// Recognition settings
+const RECOGNITION_INTERVAL = 500; // 2 recognitions/sec is plenty
 const BURST_DELAY = 50; // For burst recognition after visibility change
 
 function App() {
@@ -46,6 +46,7 @@ function App() {
     const containerRef = useRef<HTMLDivElement>(null);
     const lastSendTimeRef = useRef<Map<string, number>>(new Map());
     const burstModeRef = useRef(false);
+    const facesRef = useRef<Map<string, TrackedFace>>(new Map());
 
     // Hooks - onDataChange clears send times for immediate re-recognition
     const handleDataChange = useCallback(() => {
@@ -58,6 +59,10 @@ function App() {
         enabled: isDemoActive // Only connect when demo is active to prevent errors on landing page
     });
     const { faces, isModelLoaded, error: detectionError } = useFaceDetection(videoRef);
+
+    // Keep facesRef in sync — avoids putting `faces` in effect/callback deps
+    // (must come after useFaceDetection which declares `faces`)
+    useEffect(() => { facesRef.current = faces; }, [faces]);
 
     // Force kill all camera streams when demo is deactivated
     useEffect(() => {
@@ -92,10 +97,11 @@ function App() {
     }, []);
 
     // Immediate face recognition - can be called for burst mode
+    // Reads facesRef so it doesn't re-memo on every detection cycle
     const sendAllFacesNow = useCallback(() => {
         if (!videoRef.current || wsStatus !== 'connected') return;
 
-        for (const [trackId, face] of faces) {
+        for (const [trackId, face] of facesRef.current) {
             if (!face.isVisible) continue;
 
             const imageBase64 = cropFaceFromVideo(videoRef.current, face.bbox);
@@ -109,7 +115,7 @@ function App() {
                 lastSendTimeRef.current.set(trackId, Date.now());
             }
         }
-    }, [faces, wsStatus, sendFaceData]);
+    }, [wsStatus, sendFaceData]);
 
     // Visibility change handler - CRITICAL for tab switching
     useEffect(() => {
@@ -153,6 +159,11 @@ function App() {
     }, [faces, clearAllResults]);
 
     // Immediately recognize NEW faces (those without results yet)
+    // Only triggers when faces Map identity changes (from detection hook)
+    // but reads results via ref to avoid double-dependency churn
+    const resultsRef = useRef(results);
+    useEffect(() => { resultsRef.current = results; }, [results]);
+
     useEffect(() => {
         if (!videoRef.current || wsStatus !== 'connected') return;
 
@@ -160,7 +171,7 @@ function App() {
             if (!face.isVisible) continue;
 
             // If this face has no result yet, send immediately
-            if (!results.has(trackId) && !lastSendTimeRef.current.has(trackId)) {
+            if (!resultsRef.current.has(trackId) && !lastSendTimeRef.current.has(trackId)) {
                 const imageBase64 = cropFaceFromVideo(videoRef.current, face.bbox);
                 if (imageBase64) {
                     console.log(`[App] New face detected: ${trackId.slice(0, 6)} - sending immediately`);
@@ -174,16 +185,17 @@ function App() {
                 }
             }
         }
-    }, [faces, results, wsStatus, sendFaceData]);
+    }, [faces, wsStatus, sendFaceData]);
 
     // Regular face recognition loop
+    // Uses facesRef so the interval is NOT recreated on every detection cycle
     useEffect(() => {
         if (!cameraReady || wsStatus !== 'connected') return;
 
         const sendForRecognition = () => {
             const now = Date.now();
 
-            for (const [trackId, face] of faces) {
+            for (const [trackId, face] of facesRef.current) {
                 if (!face.isVisible) continue;
 
                 const lastSend = lastSendTimeRef.current.get(trackId) || 0;
@@ -206,7 +218,7 @@ function App() {
 
         const interval = setInterval(sendForRecognition, RECOGNITION_INTERVAL);
         return () => clearInterval(interval);
-    }, [cameraReady, wsStatus, faces, sendFaceData]);
+    }, [cameraReady, wsStatus, sendFaceData]);
 
     // Callbacks
     const handleCameraReady = useCallback(() => {

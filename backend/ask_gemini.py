@@ -12,7 +12,7 @@ import json
 import base64
 from typing import Dict, Any
 
-from database import get_all_people
+from database import get_all_people_lightweight
 from gemini_client import call_gemini
 
 
@@ -31,7 +31,7 @@ async def process_gemini_query(audio_bytes: bytes) -> Dict[str, Any]:
         }
     """
     try:
-        people = get_all_people()
+        people = get_all_people_lightweight()
 
         if not people:
             return {
@@ -41,13 +41,14 @@ async def process_gemini_query(audio_bytes: bytes) -> Dict[str, Any]:
             }
 
         # Build compact people context for the prompt
+        # Truncate context to prevent prompt injection / token bloat
         people_context = [
             {
                 "id": p.get("id", ""),
-                "name": p.get("name", "?"),
-                "relation": p.get("relation", ""),
-                "context": p.get("context", ""),
-                "last_met": p.get("last_met", ""),
+                "name": p.get("name", "?")[:50],
+                "relation": p.get("relation", "")[:30],
+                "context": p.get("context", "")[:120],
+                "last_met": p.get("last_met", "")[:30],
             }
             for p in people
         ]
@@ -107,7 +108,7 @@ Respond with JSON only (no markdown):
         query = parsed.get("query", "")
         print(f"[AskGemini] Query: {query}")
 
-        # Build matches with full person data
+        # Build matches with person data (lightweight — no face_image)
         people_map = {p["id"]: p for p in people}
         matches = [
             {"person": people_map[m["id"]], "relevance": m.get("relevance", "")}

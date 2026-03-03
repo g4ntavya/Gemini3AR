@@ -164,10 +164,12 @@ class FaceRecognizer:
         return self.get_embedding(image)
     
     def compute_similarity(self, emb1: np.ndarray, emb2: np.ndarray) -> float:
-        """Cosine similarity between embeddings."""
-        emb1_norm = emb1 / (np.linalg.norm(emb1) + 1e-8)
-        emb2_norm = emb2 / (np.linalg.norm(emb2) + 1e-8)
-        return float(np.dot(emb1_norm, emb2_norm))
+        """Cosine similarity between embeddings.
+        
+        InsightFace .normed_embedding is already L2-normalized,
+        so dot product == cosine similarity (skip redundant norm).
+        """
+        return float(np.dot(emb1, emb2))
     
     def find_match(self, query_embedding: np.ndarray) -> Tuple[Optional[dict], float]:
         """Find best match above threshold from cache."""
