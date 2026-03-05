@@ -12,23 +12,23 @@ export default defineConfig({
         // Proxy API requests to backend (solves HTTPS/HTTP mixed content on mobile)
         proxy: {
             '/api': {
-                target: 'http://localhost:8000',
+                target: 'http://146.56.53.208:8000',
                 changeOrigin: true,
             },
             '/ws': {
-                target: 'ws://localhost:8000',
+                target: 'ws://146.56.53.208:8000',
                 ws: true,
             },
             '/people': {
-                target: 'http://localhost:8000',
+                target: 'http://146.56.53.208:8000',
                 changeOrigin: true,
             },
             '/register-face': {
-                target: 'http://localhost:8000',
+                target: 'http://146.56.53.208:8000',
                 changeOrigin: true,
             },
             '/health': {
-                target: 'http://localhost:8000',
+                target: 'http://146.56.53.208:8000',
                 changeOrigin: true,
             },
         },
