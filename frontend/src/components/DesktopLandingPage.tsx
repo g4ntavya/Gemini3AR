@@ -15,9 +15,10 @@ interface LandingPageProps {
     onStartDemo: () => void;
     user: User | null;
     onSignIn: () => void;
+    onLogout: () => void;
 }
 
-export function LandingPage({ onStartDemo, user, onSignIn }: LandingPageProps) {
+export function LandingPage({ onStartDemo, user, onSignIn, onLogout }: LandingPageProps) {
     const wrapperRef = useRef<HTMLDivElement>(null);
     const heroRef = useRef<HTMLElement>(null);
     const bgRef = useRef<HTMLImageElement>(null);
@@ -659,6 +660,16 @@ export function LandingPage({ onStartDemo, user, onSignIn }: LandingPageProps) {
                                                     >
                                                         Try Demo
                                                     </button>
+                                                    {user && (
+                                                        <button
+                                                            onClick={(e) => { e.preventDefault(); onLogout(); }}
+                                                            onTouchEnd={(e) => { e.preventDefault(); onLogout(); }}
+                                                            className="text-[10px] sm:text-sm md:text-base px-4 py-2 md:px-6 md:py-3 border border-black/20 text-black/60 hover:bg-remindar-button-brown hover:text-remindar-button-text hover:border-remindar-button-brown transition-all duration-300 relative z-50 cursor-pointer"
+                                                            style={{ fontFamily: 'Mileast', fontStyle: 'italic' }}
+                                                        >
+                                                            Log Out
+                                                        </button>
+                                                    )}
                                                 </div>
                                                 <p
                                                     className="text-black text-[10px] sm:text-xs mt-2 opacity-0"

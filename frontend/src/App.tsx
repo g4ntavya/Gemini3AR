@@ -31,7 +31,7 @@ function App() {
     const [cameraError, setCameraError] = useState<string | null>(null);
 
     // Auth
-    const { user, signInWithGoogle, getIdToken } = useAuth();
+    const { user, signInWithGoogle, logout, getIdToken } = useAuth();
 
     // Wire up auth token for all API calls
     useEffect(() => {
@@ -390,7 +390,7 @@ function App() {
 
     // Landing page
     if (!isDemoActive) {
-        return <LandingPage onStartDemo={() => setIsDemoActive(true)} user={user} onSignIn={signInWithGoogle} />;
+        return <LandingPage onStartDemo={() => setIsDemoActive(true)} user={user} onSignIn={signInWithGoogle} onLogout={logout} />;
     }
 
     // Camera error
