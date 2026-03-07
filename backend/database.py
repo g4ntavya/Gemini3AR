@@ -190,17 +190,17 @@ def get_person(person_id: str) -> Optional[dict]:
     return None
 
 
-def get_all_people_with_embeddings(user_id: str = '') -> List[Tuple[dict, Optional[np.ndarray]]]:
+def get_all_people_with_embeddings(user_id: str = '', load_all: bool = False) -> List[Tuple[dict, Optional[np.ndarray]]]:
     """
-    Get all people who have embeddings for a specific user.
+    Get all people who have embeddings.
+    load_all=True: returns ALL users' entries (used for cache loading).
     Admin sees ALL users' entries.
     Returns list of (person_dict, embedding_array) tuples.
-    Used for face matching.
     """
     conn = get_connection()
     cursor = conn.cursor()
     
-    if user_id == ADMIN_UID:
+    if load_all or user_id == ADMIN_UID:
         cursor.execute("SELECT * FROM people WHERE embedding IS NOT NULL AND is_deleted = 0")
     else:
         cursor.execute("SELECT * FROM people WHERE embedding IS NOT NULL AND user_id = ? AND is_deleted = 0", (user_id,))

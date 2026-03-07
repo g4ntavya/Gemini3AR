@@ -89,11 +89,11 @@ class FaceRecognizer:
             self.load_cache_from_database()
     
     def load_cache_from_database(self):
-        """Fallback: load from SQLite."""
+        """Fallback: load ALL faces from SQLite (user filtering happens at match time)."""
         try:
             from database import get_all_people_with_embeddings
             
-            known_people = get_all_people_with_embeddings()
+            known_people = get_all_people_with_embeddings(load_all=True)
             self._cache.clear()
             
             for person, embedding in known_people:
