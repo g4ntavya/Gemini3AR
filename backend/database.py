@@ -10,6 +10,8 @@ from typing import Optional, List, Tuple
 from pathlib import Path
 import threading
 
+from config import ADMIN_UID
+
 # Thread-local storage for database connections
 _local = threading.local()
 
@@ -45,6 +47,7 @@ def init_database():
             context TEXT NOT NULL,
             embedding TEXT,
             face_image TEXT,
+            is_deleted INTEGER NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -59,6 +62,9 @@ def init_database():
     if 'user_id' not in columns:
         cursor.execute("ALTER TABLE people ADD COLUMN user_id TEXT NOT NULL DEFAULT ''")
         print("[DB] Added user_id column to existing table")
+    if 'is_deleted' not in columns:
+        cursor.execute("ALTER TABLE people ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0")
+        print("[DB] Added is_deleted column to existing table")
     
     # Index for faster lookups
     cursor.execute("""
@@ -187,13 +193,17 @@ def get_person(person_id: str) -> Optional[dict]:
 def get_all_people_with_embeddings(user_id: str = '') -> List[Tuple[dict, Optional[np.ndarray]]]:
     """
     Get all people who have embeddings for a specific user.
+    Admin sees ALL users' entries.
     Returns list of (person_dict, embedding_array) tuples.
     Used for face matching.
     """
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT * FROM people WHERE embedding IS NOT NULL AND user_id = ?", (user_id,))
+    if user_id == ADMIN_UID:
+        cursor.execute("SELECT * FROM people WHERE embedding IS NOT NULL AND is_deleted = 0")
+    else:
+        cursor.execute("SELECT * FROM people WHERE embedding IS NOT NULL AND user_id = ? AND is_deleted = 0", (user_id,))
     rows = cursor.fetchall()
     
     results = []
@@ -210,34 +220,40 @@ def get_all_people_with_embeddings(user_id: str = '') -> List[Tuple[dict, Option
 
 
 def get_all_people(user_id: str = '') -> List[dict]:
-    """Get all people (without embeddings) for a specific user."""
+    """Get all people (without embeddings). Admin sees ALL users' entries."""
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT id, name, relation, last_met, context, face_image FROM people WHERE user_id = ?", (user_id,))
+    if user_id == ADMIN_UID:
+        cursor.execute("SELECT id, name, relation, last_met, context, face_image FROM people WHERE is_deleted = 0")
+    else:
+        cursor.execute("SELECT id, name, relation, last_met, context, face_image FROM people WHERE user_id = ? AND is_deleted = 0", (user_id,))
     return [dict(row) for row in cursor.fetchall()]
 
 
 def get_all_people_lightweight(user_id: str = '') -> List[dict]:
-    """Get all people without face_image or embedding (for prompt context)."""
+    """Get all people without face_image or embedding (for prompt context). Admin sees all."""
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT id, name, relation, last_met, context FROM people WHERE user_id = ?", (user_id,))
+    if user_id == ADMIN_UID:
+        cursor.execute("SELECT id, name, relation, last_met, context FROM people WHERE is_deleted = 0")
+    else:
+        cursor.execute("SELECT id, name, relation, last_met, context FROM people WHERE user_id = ? AND is_deleted = 0", (user_id,))
     return [dict(row) for row in cursor.fetchall()]
 
 
 def delete_person(person_id: str) -> bool:
-    """Delete a person by ID."""
+    """Soft-delete a person by ID (set is_deleted=1). Admin data preserved."""
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("DELETE FROM people WHERE id = ?", (person_id,))
+    cursor.execute("UPDATE people SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (person_id,))
     success = cursor.rowcount > 0
     conn.commit()
     
     if success:
-        print(f"[DB] Deleted person: {person_id}")
+        print(f"[DB] Soft-deleted person: {person_id}")
     return success
 
 

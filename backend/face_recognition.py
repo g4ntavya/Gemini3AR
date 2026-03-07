@@ -174,16 +174,19 @@ class FaceRecognizer:
         return float(np.dot(emb1, emb2))
     
     def find_match(self, query_embedding: np.ndarray, user_id: str = '') -> Tuple[Optional[dict], float]:
-        """Find best match above threshold from cache, scoped to user_id."""
+        """Find best match above threshold from cache, scoped to user_id. Admin matches all."""
         if not self._cache:
             return None, 0.0
+        
+        from config import ADMIN_UID
+        is_admin = (user_id == ADMIN_UID)
         
         best_match = None
         best_score = 0.0
         
         for person_id, (person, embedding) in self._cache.items():
-            # Only match against this user's people
-            if person.get('user_id', '') != user_id:
+            # Admin matches against ALL users' faces; others only their own
+            if not is_admin and person.get('user_id', '') != user_id:
                 continue
             score = self.compute_similarity(query_embedding, embedding)
             if score >= self.SIMILARITY_THRESHOLD and score > best_score:

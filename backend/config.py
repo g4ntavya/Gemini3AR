@@ -16,3 +16,6 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
 # Gemini model to use - Gemini 3 Flash
 GEMINI_MODEL = "gemini-3-flash-preview"
+
+# Admin UID — sees ALL entries across all users, immune to other users' deletions
+ADMIN_UID = "S3VXfgVESefgxcMKYlBAdVUxSkg1"
