@@ -35,7 +35,7 @@ export function GeminiResponseOverlay({ response, onClose }: GeminiResponseOverl
             <div className="gemini-response-card">
                 {/* Header */}
                 <div className="response-header">
-                    <div className="response-title">Gemini Insights</div>
+                    <div className="response-title">Insights</div>
                     <div className="response-actions">
                         {/* TTS Button */}
                         <button

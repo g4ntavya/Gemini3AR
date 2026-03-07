@@ -57,8 +57,8 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout }: LandingPa
     const geminiFeature4Ref = useRef<HTMLDivElement>(null);
     const textContainerRef = useRef<HTMLDivElement>(null);
 
-    const [typedText, setTypedText] = useState('');
-    const [isTypingComplete, setIsTypingComplete] = useState(false);
+    const typingSpanRef = useRef<HTMLSpanElement>(null);
+    const cursorRef = useRef<HTMLSpanElement>(null);
     const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
     const fullText = 'RemindAR is a real-time memory assistant that provides gentle, in the moment context during interactions.';
 
@@ -82,64 +82,9 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout }: LandingPa
         };
     }, []);
 
-    // Parallax handler moved to component scope for clean event listener management
-    const handleMouseMove = (e: MouseEvent) => {
-        const { clientX, clientY } = e;
-        const { innerWidth, innerHeight } = window;
-
-        const xPos = (clientX / innerWidth) - 0.5;
-        const yPos = (clientY / innerHeight) - 0.5;
-
-        gsap.to(bgRef.current, {
-            x: xPos * 10,
-            y: yPos * 10,
-            duration: 0.8,
-            ease: 'power2.out',
-            force3D: false
-        });
-
-        gsap.to(frameRef.current, {
-            x: xPos * 8,
-            y: yPos * 5,
-            duration: 0.8,
-            ease: 'power2.out',
-            force3D: false
-        });
-
-        if (bgContainerRef.current) {
-            gsap.to(bgContainerRef.current, {
-                x: xPos * 8, // Moves 1:1 with frame
-                y: yPos * 5,
-                duration: 0.8,
-                ease: 'power2.out',
-                force3D: false
-            });
-        }
-
-        gsap.to(rightTextRef.current, {
-            x: xPos * 20,
-            y: yPos * 15,
-            duration: 0.5,
-            ease: 'power2.out',
-            force3D: false
-        });
-
-        gsap.to(bottomTextRef.current, {
-            x: xPos * 20,
-            y: yPos * 15,
-            duration: 0.5,
-            ease: 'power2.out',
-            force3D: false
-        });
-
-        gsap.to(leftTextRef.current, {
-            x: xPos * 60,
-            y: yPos * 40,
-            duration: 0.4,
-            ease: 'power2.out',
-            force3D: false
-        });
-    };
+    // Parallax state — rAF lerp loop (zero tweens, zero allocations per mouse event)
+    const parallaxMouse = useRef({ x: 0, y: 0 });
+    const parallaxRaf = useRef(0);
 
     useEffect(() => {
         const hero = heroRef.current;
@@ -152,9 +97,38 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout }: LandingPa
 
         if (!hero || !wrapper || !content || !leftText || !frameContainer || !bgContainer) return;
 
-        // Mouse parallax effect (existing)
+        // Mouse parallax — rAF lerp loop: mousemove only stores target, rAF smoothly interpolates
         if (!isMobile) {
+            const layers = [
+                { el: bgRef.current!,        mx: 10, my: 10, cx: 0, cy: 0, ease: 0.08 },
+                { el: frameRef.current!,      mx: 8,  my: 5,  cx: 0, cy: 0, ease: 0.08 },
+                { el: bgContainer,            mx: 8,  my: 5,  cx: 0, cy: 0, ease: 0.08 },
+                { el: rightTextRef.current!,  mx: 20, my: 15, cx: 0, cy: 0, ease: 0.12 },
+                { el: bottomTextRef.current!, mx: 20, my: 15, cx: 0, cy: 0, ease: 0.12 },
+                { el: leftTextRef.current!,   mx: 60, my: 40, cx: 0, cy: 0, ease: 0.15 },
+            ].filter(l => l.el);
+
+            const mouse = parallaxMouse.current;
+
+            const tick = () => {
+                for (const layer of layers) {
+                    const tx = mouse.x * layer.mx;
+                    const ty = mouse.y * layer.my;
+                    layer.cx += (tx - layer.cx) * layer.ease;
+                    layer.cy += (ty - layer.cy) * layer.ease;
+                    gsap.set(layer.el, { x: layer.cx, y: layer.cy, force3D: true });
+                }
+                parallaxRaf.current = requestAnimationFrame(tick);
+            };
+            parallaxRaf.current = requestAnimationFrame(tick);
+
+            const handleMouseMove = (e: MouseEvent) => {
+                mouse.x = (e.clientX / window.innerWidth) - 0.5;
+                mouse.y = (e.clientY / window.innerHeight) - 0.5;
+            };
+
             hero.addEventListener('mousemove', handleMouseMove);
+            (hero as any)._parallaxHandler = handleMouseMove;
         }
 
         // ScrollTrigger animation
@@ -310,23 +284,29 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout }: LandingPa
         }
 
         return () => {
-            hero.removeEventListener('mousemove', handleMouseMove);
+            cancelAnimationFrame(parallaxRaf.current);
+            if ((hero as any)._parallaxHandler) {
+                hero.removeEventListener('mousemove', (hero as any)._parallaxHandler);
+                delete (hero as any)._parallaxHandler;
+            }
             ScrollTrigger.getAll().forEach(t => t.kill());
         };
     }, [isMobile]); // Re-run animation setup when mobile state changes
 
-    // Typing effect on page load
+    // Typing effect — direct DOM mutation, zero React re-renders
     useEffect(() => {
         let currentIndex = 0;
         const typingInterval = setInterval(() => {
             if (currentIndex <= fullText.length) {
-                setTypedText(fullText.slice(0, currentIndex));
+                if (typingSpanRef.current) {
+                    typingSpanRef.current.textContent = fullText.slice(8, currentIndex);
+                }
                 currentIndex++;
             } else {
                 clearInterval(typingInterval);
-                setIsTypingComplete(true); // Hide cursor when done
+                if (cursorRef.current) cursorRef.current.style.display = 'none';
             }
-        }, 25); // Slower typing
+        }, 25);
 
         return () => clearInterval(typingInterval);
     }, []);
@@ -465,8 +445,8 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout }: LandingPa
 
         return () => {
             const currentHero = heroRef.current;
-            if (currentHero && !isMobile) {
-                currentHero.removeEventListener('mousemove', handleMouseMove);
+            if (currentHero && (currentHero as any)._parallaxHandler) {
+                currentHero.removeEventListener('mousemove', (currentHero as any)._parallaxHandler);
             }
             ScrollTrigger.getAll().forEach(t => {
                 if (t.vars.trigger === featuresSectionRef.current) {
@@ -623,7 +603,7 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout }: LandingPa
                                                     className={`${isMobile ? 'text-[4.6vw] leading-tight' : 'text-2xl sm:text-3xl md:text-4xl lg:text-[40px] leading-tight'}`}
                                                     style={{ fontFamily: 'Moglan_DEMO', color: '#272728' }}
                                                 >
-                                                    <span className="underline decoration-1 underline-offset-2" style={{ textDecorationColor: '#272728' }}>RemindAR</span>{typedText.slice(8)}{!isTypingComplete && <span className="animate-pulse">|</span>}
+                                                    <span className="underline decoration-1 underline-offset-2" style={{ textDecorationColor: '#272728' }}>RemindAR</span><span ref={typingSpanRef}></span><span ref={cursorRef} className="animate-pulse">|</span>
                                                 </h2>
 
                                                 {/* Auth Buttons - Sign In + Try Demo */}
@@ -814,7 +794,7 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout }: LandingPa
                             ref={glassesContainerRef}
                             className={`mb-8 md:mb-0 relative z-20 ${isMobile ? 'w-full h-[320px]' : 'w-[500px] h-[350px] md:w-[700px] md:h-[500px]'}`}
                         >
-                            <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
+                            <Canvas camera={{ position: [0, 0, 5], fov: 50 }} frameloop="demand">
                                 <ambientLight intensity={0.6} />
                                 <directionalLight position={[5, 5, 5]} intensity={1} />
                                 <Suspense fallback={null}>
