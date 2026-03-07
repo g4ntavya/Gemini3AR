@@ -17,7 +17,7 @@ from typing import Dict, Set, List, Optional
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -166,6 +166,29 @@ app.add_middleware(
 
 
 # ============================================================================
+# Firebase Auth Token Verification
+# ============================================================================
+
+def verify_firebase_token(token: str) -> str:
+    """Verify Firebase ID token and return uid. Raises HTTPException on failure."""
+    from firebase_admin import auth as firebase_auth
+    try:
+        decoded = firebase_auth.verify_id_token(token)
+        return decoded["uid"]
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid auth token: {e}")
+
+
+async def get_current_user(request: Request) -> str:
+    """FastAPI dependency: extract uid from Authorization header."""
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing auth token")
+    token = auth_header.split("Bearer ", 1)[1]
+    return verify_firebase_token(token)
+
+
+# ============================================================================
 # WebSocket Connection Manager
 # ============================================================================
 
@@ -280,16 +303,28 @@ def build_recognition_result(
 # ============================================================================
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(None)):
     """
     Main WebSocket endpoint for real-time face recognition.
+    Requires auth token as query parameter: /ws?token=...
     
     Protocol:
     - Client sends: {"type": "face_data", "data": {...}}
     - Server responds: {"type": "recognition_result", "data": {...}}
     """
+    # Verify auth token
+    if not token:
+        await websocket.close(code=4001, reason="Missing auth token")
+        return
+    try:
+        user_id = verify_firebase_token(token)
+    except HTTPException:
+        await websocket.close(code=4001, reason="Invalid auth token")
+        return
+    
     await manager.connect(websocket)
     recognizer = get_recognizer()
+    print(f"[WS] Authenticated user: {user_id[:8]}...")
     
     try:
         while True:
@@ -309,7 +344,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 await manager.send_json(websocket, {"type": "pong"})
                 
             elif msg_type == "face_data":
-                # Process face recognition
+                # Process face recognition (scoped to user)
                 track_id = data.get("track_id", "unknown")
                 image_base64 = data.get("image_base64", "")
                 
@@ -318,10 +353,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 print(f"[WS] Processing face: {track_id[:20]}...")
                 
-                # Run recognition in thread pool (avoids blocking event loop)
+                # Run recognition in thread pool (scoped to user_id)
                 loop = asyncio.get_event_loop()
                 person, confidence, embedding = await loop.run_in_executor(
-                    None, recognizer.recognize, image_base64
+                    None, recognizer.recognize, image_base64, user_id
                 )
                 
                 # Log result
@@ -370,12 +405,11 @@ async def root():
 
 @app.get("/health")
 async def health():
-    """Detailed health check."""
+    """Detailed health check (no auth required)."""
     recognizer = get_recognizer()
     return {
         "status": "healthy",
         "model_loaded": recognizer.model is not None,
-        "people_count": len(get_all_people()),
         "cache_count": recognizer.get_cache_count()
     }
 
@@ -394,7 +428,7 @@ async def refresh_cache():
 from fastapi import File, UploadFile
 
 @app.post("/api/transcribe-and-extract")
-async def api_transcribe_and_extract(audio: UploadFile = File(...)):
+async def api_transcribe_and_extract(audio: UploadFile = File(...), user_id: str = Depends(get_current_user)):
     """
     Transcribe audio AND extract structured info in ONE Gemini call.
     Primary endpoint for voice input. Handles English, Hindi, Hinglish seamlessly.
@@ -436,7 +470,7 @@ async def api_transcribe_and_extract(audio: UploadFile = File(...)):
 
 
 @app.post("/api/ask-gemini")
-async def api_ask_gemini(audio: UploadFile = File(...)):
+async def api_ask_gemini(audio: UploadFile = File(...), user_id: str = Depends(get_current_user)):
     """
     Ask Gemini about people context.
     
@@ -448,7 +482,7 @@ async def api_ask_gemini(audio: UploadFile = File(...)):
     audio_bytes = await audio.read()
     print(f"[API] Ask Gemini: {len(audio_bytes)} bytes")
     
-    result = await process_gemini_query(audio_bytes)
+    result = await process_gemini_query(audio_bytes, user_id=user_id)
     
     return result
 
@@ -459,7 +493,7 @@ class ExtractionRequest(BaseModel):
     text: str
 
 @app.post("/api/extract")
-async def api_extract(request: ExtractionRequest):
+async def api_extract(request: ExtractionRequest, user_id: str = Depends(get_current_user)):
     """
     Extract structured info (name, relation, context) from text using Gemini.
     """
@@ -493,13 +527,13 @@ async def api_extract(request: ExtractionRequest):
 
 
 @app.get("/people", response_model=list[Person])
-async def list_people():
-    """Get all known people."""
-    return get_all_people()
+async def list_people(user_id: str = Depends(get_current_user)):
+    """Get all known people for the authenticated user."""
+    return get_all_people(user_id=user_id)
 
 
 @app.get("/people/{person_id}", response_model=Person)
-async def get_person_by_id(person_id: str):
+async def get_person_by_id(person_id: str, user_id: str = Depends(get_current_user)):
     """Get a specific person by ID."""
     person = get_person(person_id)
     if not person:
@@ -508,7 +542,7 @@ async def get_person_by_id(person_id: str):
 
 
 @app.post("/people", response_model=Person)
-async def create_person(person: PersonCreate):
+async def create_person(person: PersonCreate, user_id: str = Depends(get_current_user)):
     """
     Create a new person entry.
     Note: Embedding must be added separately via /register-face endpoint.
@@ -520,7 +554,8 @@ async def create_person(person: PersonCreate):
         name=person.name,
         relation=person.relation,
         last_met=person.last_met,
-        context=person.context
+        context=person.context,
+        user_id=user_id
     )
     
     if not success:
@@ -530,7 +565,7 @@ async def create_person(person: PersonCreate):
     created_person = get_person(person_id)
     
     # Sync to Firebase
-    sync_person_to_firebase(created_person)
+    sync_person_to_firebase(created_person, user_id=user_id)
     
     # Broadcast to all clients for real-time update
     # NOTE: Use person_created, NOT person_registered
@@ -545,7 +580,7 @@ async def create_person(person: PersonCreate):
 
 
 @app.put("/people/{person_id}", response_model=Person)
-async def update_person(person_id: str, person: PersonCreate):
+async def update_person(person_id: str, person: PersonCreate, user_id: str = Depends(get_current_user)):
     """Update an existing person's details."""
     from database import update_person as db_update_person
     
@@ -571,7 +606,7 @@ async def update_person(person_id: str, person: PersonCreate):
     recognizer.update_person_data(person_id, updated_person)
     
     # Sync to Firebase
-    sync_person_to_firebase(updated_person)
+    sync_person_to_firebase(updated_person, user_id=user_id)
     
     # Broadcast to all clients so UI updates immediately
     await broadcast_to_all({
@@ -585,7 +620,7 @@ async def update_person(person_id: str, person: PersonCreate):
 
 
 @app.post("/register-face/{person_id}")
-async def register_face(person_id: str, face_data: FaceData):
+async def register_face(person_id: str, face_data: FaceData, user_id: str = Depends(get_current_user)):
     """
     Register a face embedding for an existing person.
     Stores in both SQLite and Firestore for persistence.
@@ -615,11 +650,11 @@ async def register_face(person_id: str, face_data: FaceData):
     
     # Add to local cache immediately
     updated_person = get_person(person_id)
-    recognizer.add_to_cache(person_id, updated_person, embedding)
+    recognizer.add_to_cache(person_id, updated_person, embedding, user_id=user_id)
     
     # Store embedding + face_image in Firestore for persistence
-    sync_embedding_to_firebase(person_id, embedding)
-    sync_person_to_firebase(updated_person)
+    sync_embedding_to_firebase(person_id, embedding, user_id=user_id)
+    sync_person_to_firebase(updated_person, user_id=user_id)
     
     # Broadcast for real-time update
     await broadcast_to_all({
@@ -632,8 +667,8 @@ async def register_face(person_id: str, face_data: FaceData):
 
 
 @app.delete("/people/{person_id}")
-async def remove_person(person_id: str):
-    """Delete a person from the database."""
+async def remove_person(person_id: str, user_id: str = Depends(get_current_user)):
+    """Delete a person from the database (soft-delete in Firebase)."""
     success = delete_person(person_id)
     if not success:
         raise HTTPException(status_code=404, detail="Person not found")
@@ -642,8 +677,8 @@ async def remove_person(person_id: str):
     recognizer = get_recognizer()
     recognizer.remove_from_cache(person_id)
     
-    # Sync deletion to Firebase
-    delete_person_from_firebase(person_id)
+    # Soft-delete in Firebase (marks deleted: true, keeps data)
+    delete_person_from_firebase(person_id, user_id=user_id)
     
     # Broadcast deletion to all clients
     await broadcast_to_all({
@@ -686,7 +721,7 @@ class DashboardInsightsRequest(BaseModel):
 
 
 @app.post("/api/summarize-conversation")
-async def summarize_conversation(request: ConversationSummaryRequest):
+async def summarize_conversation(request: ConversationSummaryRequest, user_id: str = Depends(get_current_user)):
     """
     Generate a clean English memory summary from conversation transcript.
     
@@ -734,7 +769,7 @@ async def summarize_conversation(request: ConversationSummaryRequest):
 
 
 @app.post("/api/extract-normalized")
-async def extract_and_normalize(request: ExtractionRequest):
+async def extract_and_normalize(request: ExtractionRequest, user_id: str = Depends(get_current_user)):
     """
     Extract and normalize structured info (name, relation, context) from text using Gemini.
     """
@@ -754,7 +789,7 @@ async def extract_and_normalize(request: ExtractionRequest):
 
 
 @app.post("/api/translate-summarize")
-async def translate_and_summarize(request: TranslateRequest):
+async def translate_and_summarize(request: TranslateRequest, user_id: str = Depends(get_current_user)):
     """
     Translate and summarize non-English or mixed-language text using Gemini.
     Handles Hindi, Hinglish (Hindi+English mix), and other languages.
@@ -785,26 +820,14 @@ async def translate_and_summarize(request: TranslateRequest):
 
 
 @app.get("/api/dashboard/insights")
-async def get_dashboard_insights(days: int = 7, person_id: Optional[str] = None):
+async def get_dashboard_insights(days: int = 7, person_id: Optional[str] = None, user_id: str = Depends(get_current_user)):
     """
     Generate intelligent insights for the dashboard view.
     
     ONLY for dashboard - NEVER in live AR overlay.
-    
-    WHY GEMINI:
-    - Aggregates patterns across multiple memories
-    - Identifies common topics/themes
-    - Generates natural language summaries
-    - Creates caregiver-friendly explanations
-    
-    RETURNS:
-    - Last interactions summary
-    - Common topics discussed
-    - Weekly/daily summaries
-    - Caregiver notes
     """
-    # Get memories from database
-    all_people = get_all_people()
+    # Get memories from database (scoped to user)
+    all_people = get_all_people(user_id=user_id)
     
     # Filter by person_id if provided
     if person_id:
@@ -836,7 +859,7 @@ async def get_dashboard_insights(days: int = 7, person_id: Optional[str] = None)
 
 
 @app.post("/api/conversation/add-line")
-async def add_conversation_line(session_id: str, text: str, person_name: Optional[str] = None):
+async def add_conversation_line(session_id: str, text: str, person_name: Optional[str] = None, user_id: str = Depends(get_current_user)):
     """
     Add a transcription line to the conversation buffer.
     
@@ -870,7 +893,7 @@ async def add_conversation_line(session_id: str, text: str, person_name: Optiona
 
 
 @app.get("/api/conversation/get-buffer")
-async def get_conversation_buffer(session_id: str):
+async def get_conversation_buffer(session_id: str, user_id: str = Depends(get_current_user)):
     """
     Get the current conversation buffer for a session.
     """
@@ -887,7 +910,7 @@ async def get_conversation_buffer(session_id: str):
 
 
 @app.post("/api/conversation/clear")
-async def clear_conversation_buffer(session_id: str):
+async def clear_conversation_buffer(session_id: str, user_id: str = Depends(get_current_user)):
     """
     Clear the conversation buffer for a session.
     Call this after summarization is complete.
@@ -899,7 +922,7 @@ async def clear_conversation_buffer(session_id: str):
 
 
 @app.post("/api/conversation/summarize-and-save")
-async def summarize_and_save_conversation(session_id: str, person_id: Optional[str] = None):
+async def summarize_and_save_conversation(session_id: str, person_id: Optional[str] = None, user_id: str = Depends(get_current_user)):
     """
     Summarize the conversation buffer and optionally save to a person's context.
     
@@ -948,7 +971,7 @@ async def summarize_and_save_conversation(session_id: str, person_id: Optional[s
             
             # Sync to Firebase
             updated_person = get_person(person_id)
-            sync_person_to_firebase(updated_person)
+            sync_person_to_firebase(updated_person, user_id=user_id)
             
             # Broadcast update
             await broadcast_to_all({

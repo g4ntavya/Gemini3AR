@@ -16,7 +16,7 @@ from database import get_all_people_lightweight
 from gemini_client import call_gemini
 
 
-async def process_gemini_query(audio_bytes: bytes) -> Dict[str, Any]:
+async def process_gemini_query(audio_bytes: bytes, user_id: str = "") -> Dict[str, Any]:
     """
     Process a voice query about people context.
 
@@ -31,7 +31,7 @@ async def process_gemini_query(audio_bytes: bytes) -> Dict[str, Any]:
         }
     """
     try:
-        people = get_all_people_lightweight()
+        people = get_all_people_lightweight(user_id=user_id)
 
         if not people:
             return {

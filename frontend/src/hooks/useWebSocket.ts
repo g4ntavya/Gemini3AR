@@ -9,13 +9,14 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ConnectionStatus, FaceData, RecognitionResult } from '../types';
-import { WS_URL } from '../config/api';
+import { getWsUrl } from '../config/api';
 
 const HEARTBEAT_INTERVAL = 15000;
 
 interface UseWebSocketOptions {
     onDataChange?: () => void;  // Called when person data changes
     enabled?: boolean; // Whether to connect to WebSocket
+    getToken?: () => Promise<string | null>; // Firebase auth token getter
 }
 
 interface UseWebSocketReturn {
@@ -27,7 +28,7 @@ interface UseWebSocketReturn {
 }
 
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
-    const { onDataChange, enabled = true } = options;
+    const { onDataChange, enabled = true, getToken } = options;
     const [status, setStatus] = useState<ConnectionStatus>('disconnected');
 
     // KEY FIX: Use useState for results so React tracks changes
@@ -44,7 +45,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         onDataChangeRef.current = onDataChange;
     }, [onDataChange]);
 
-    const connect = useCallback(() => {
+    const connect = useCallback(async () => {
         if (!mountedRef.current || !enabled) return;
         if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
@@ -52,7 +53,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         setStatus('connecting');
 
         try {
-            const ws = new WebSocket(WS_URL);
+            // Get auth token for WS URL
+            const token = getToken ? await getToken() : undefined;
+            const wsUrl = getWsUrl(token || undefined);
+            const ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
                 console.log('[WS] Connected');
@@ -125,7 +129,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
             console.error('[WS] Connection error:', error);
             setStatus('disconnected');
         }
-    }, [enabled]); // Removes onDataChange from dependency
+    }, [enabled, getToken]); // Removes onDataChange from dependency
 
     const sendFaceData = useCallback((data: FaceData) => {
         if (wsRef.current?.readyState !== WebSocket.OPEN) return;

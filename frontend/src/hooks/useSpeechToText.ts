@@ -4,7 +4,7 @@
  */
 
 import { useRef, useCallback, useReducer } from 'react';
-import { API } from '../config/api';
+import { API, authFetch } from '../config/api';
 
 interface ExtractedInfo {
     name: string | null;
@@ -193,7 +193,7 @@ export function useSpeechToText() {
                     formData.append('audio', audioBlob, 'recording.webm');
 
                     console.log('[STT] Sending to Gemini...');
-                    const response = await fetch(API.transcribeAndExtract, {
+                    const response = await authFetch(API.transcribeAndExtract, {
                         method: 'POST',
                         body: formData,
                     });

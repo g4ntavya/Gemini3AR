@@ -71,12 +71,12 @@ def notify_update(event_type: str, data: Dict[str, Any]):
             print(f"[Firebase] Listener error: {e}")
 
 
-def sync_person_to_firebase(person_data: Dict[str, Any], embedding: Optional[np.ndarray] = None):
+def sync_person_to_firebase(person_data: Dict[str, Any], embedding: Optional[np.ndarray] = None, user_id: str = ''):
     """
     Sync a person record to Firebase Firestore.
-    Optionally includes embedding for storage.
+    Stored under /users/{user_id}/people/{person_id}
     """
-    if not _initialized or not _db:
+    if not _initialized or not _db or not user_id:
         return
     
     try:
@@ -91,7 +91,8 @@ def sync_person_to_firebase(person_data: Dict[str, Any], embedding: Optional[np.
             "last_met": person_data.get("last_met", ""),
             "context": person_data.get("context", ""),
             "has_embedding": embedding is not None,
-            "updated_at": firestore.SERVER_TIMESTAMP,  # Sentinel for Firestore
+            "deleted": False,
+            "updated_at": firestore.SERVER_TIMESTAMP,
         }
         
         # Include face image for cross-device sync
@@ -103,9 +104,9 @@ def sync_person_to_firebase(person_data: Dict[str, Any], embedding: Optional[np.
         if embedding is not None:
             doc_data["embedding"] = embedding.tolist()
         
-        # Write to Firestore
-        _db.collection("people").document(person_id).set(doc_data, merge=True)
-        print(f"[Firebase] Synced person: {person_id}")
+        # Write to Firestore under /users/{user_id}/people/{person_id}
+        _db.collection("users").document(user_id).collection("people").document(person_id).set(doc_data, merge=True)
+        print(f"[Firebase] Synced person: {person_id} for user {user_id[:8]}")
         
         # Notify listeners - use serializable data only (no Sentinel!)
         from datetime import datetime
@@ -123,13 +124,13 @@ def sync_person_to_firebase(person_data: Dict[str, Any], embedding: Optional[np.
         print(f"[Firebase] Sync error: {e}")
 
 
-def sync_embedding_to_firebase(person_id: str, embedding: np.ndarray):
+def sync_embedding_to_firebase(person_id: str, embedding: np.ndarray, user_id: str = ''):
     """Store face embedding in Firestore."""
-    if not _initialized or not _db:
+    if not _initialized or not _db or not user_id:
         return
     
     try:
-        _db.collection("people").document(person_id).update({
+        _db.collection("users").document(user_id).collection("people").document(person_id).update({
             "embedding": embedding.tolist(),
             "has_embedding": True,
             "updated_at": firestore.SERVER_TIMESTAMP,
@@ -145,14 +146,17 @@ def sync_embedding_to_firebase(person_id: str, embedding: np.ndarray):
         print(f"[Firebase] Embedding sync error: {e}")
 
 
-def delete_person_from_firebase(person_id: str):
-    """Delete a person from Firebase."""
-    if not _initialized or not _db:
+def delete_person_from_firebase(person_id: str, user_id: str = ''):
+    """Soft-delete a person in Firebase (mark as deleted, don't actually remove)."""
+    if not _initialized or not _db or not user_id:
         return
     
     try:
-        _db.collection("people").document(person_id).delete()
-        print(f"[Firebase] Deleted person: {person_id}")
+        _db.collection("users").document(user_id).collection("people").document(person_id).update({
+            "deleted": True,
+            "deleted_at": firestore.SERVER_TIMESTAMP,
+        })
+        print(f"[Firebase] Soft-deleted person: {person_id} for user {user_id[:8]}")
         notify_update("person_deleted", {"id": person_id})
     except Exception as e:
         print(f"[Firebase] Delete error: {e}")
@@ -161,7 +165,8 @@ def delete_person_from_firebase(person_id: str):
 def get_all_people_from_firebase(timeout_seconds: float = 10.0) -> List[Dict[str, Any]]:
     """
     Fetch all people with embeddings from Firestore.
-    Returns list of (person_dict, embedding) tuples.
+    Reads from /users/{uid}/people/ structure.
+    Skips deleted entries.
     
     Args:
         timeout_seconds: Maximum time to wait for Firestore response.
@@ -170,47 +175,55 @@ def get_all_people_from_firebase(timeout_seconds: float = 10.0) -> List[Dict[str
         return []
     
     try:
-        import signal
         import threading
         
         result = []
-        error = [None]  # Use list to allow modification in nested function
+        error = [None]
         completed = threading.Event()
         
         def fetch_docs():
             try:
-                collection_ref = _db.collection("people")
-                # Get all docs - we'll filter in Python
-                all_docs = list(collection_ref.stream())
+                users_ref = _db.collection("users")
+                user_docs = list(users_ref.stream())
                 
-                if not all_docs:
-                    print("[Firebase] Collection 'people' is empty")
+                if not user_docs:
+                    print("[Firebase] No users found in Firestore")
                     return
                 
-                for doc in all_docs:
-                    data = doc.to_dict()
-                    if not data:
-                        continue
-                    data["id"] = doc.id
+                for user_doc in user_docs:
+                    user_id = user_doc.id
+                    people_ref = users_ref.document(user_id).collection("people")
                     
-                    # Filter: only include people with embeddings
-                    if not data.get("has_embedding"):
-                        continue
-                    
-                    # Convert embedding list back to numpy array
-                    if "embedding" in data and data["embedding"]:
-                        data["embedding_array"] = np.array(data["embedding"], dtype=np.float32)
-                    else:
-                        data["embedding_array"] = None
+                    for doc in people_ref.stream():
+                        data = doc.to_dict()
+                        if not data:
+                            continue
                         
-                    result.append(data)
+                        # Skip deleted entries
+                        if data.get("deleted"):
+                            continue
+                        
+                        data["id"] = doc.id
+                        data["user_id"] = user_id
+                        
+                        # Only include people with embeddings
+                        if not data.get("has_embedding"):
+                            continue
+                        
+                        # Convert embedding list back to numpy array
+                        if "embedding" in data and data["embedding"]:
+                            data["embedding_array"] = np.array(data["embedding"], dtype=np.float32)
+                        else:
+                            data["embedding_array"] = None
+                        
+                        result.append(data)
                     
             except Exception as e:
                 error[0] = e
             finally:
                 completed.set()
         
-        # Start fetch in daemon thread (will be killed when main thread exits)
+        # Start fetch in daemon thread
         thread = threading.Thread(target=fetch_docs, daemon=True)
         thread.start()
         
@@ -219,11 +232,10 @@ def get_all_people_from_firebase(timeout_seconds: float = 10.0) -> List[Dict[str
             if error[0]:
                 print(f"[Firebase] Fetch error: {error[0]}")
                 return []
-            print(f"[Firebase] Loaded {len(result)} people with embeddings")
+            print(f"[Firebase] Loaded {len(result)} people with embeddings from all users")
             return result
         else:
             print(f"[Firebase] Fetch timed out after {timeout_seconds}s - continuing without Firestore sync")
-            # Thread is daemon, so it won't block program exit
             return []
         
     except Exception as e:

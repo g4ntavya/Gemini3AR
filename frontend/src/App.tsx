@@ -14,9 +14,10 @@ import { AskGeminiButton, GeminiResponse } from './components/AskGeminiButton';
 import { GeminiResponseOverlay } from './components/GeminiResponseOverlay';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useFaceDetection } from './hooks/useFaceDetection';
+import { useAuth } from './hooks/useAuth';
 import { cropFaceFromVideo } from './utils/faceUtils';
 import { Person, TrackedFace } from './types';
-import { API } from './config/api';
+import { API, authFetch, setTokenGetter } from './config/api';
 import { killAllStreams } from './utils/mediaStreamTracker';
 
 // Recognition settings
@@ -28,6 +29,14 @@ function App() {
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [cameraReady, setCameraReady] = useState(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
+
+    // Auth
+    const { user, signInWithGoogle, getIdToken } = useAuth();
+
+    // Wire up auth token for all API calls
+    useEffect(() => {
+        setTokenGetter(getIdToken);
+    }, [getIdToken]);
 
     // Registration/Modify modal state
     const [showModal, setShowModal] = useState(false);
@@ -56,7 +65,8 @@ function App() {
 
     const { status: wsStatus, sendFaceData, results, clearResult, clearAllResults } = useWebSocket({
         onDataChange: handleDataChange,
-        enabled: isDemoActive // Only connect when demo is active to prevent errors on landing page
+        enabled: isDemoActive, // Only connect when demo is active to prevent errors on landing page
+        getToken: getIdToken,
     });
     const { faces, isModelLoaded, error: detectionError } = useFaceDetection(videoRef);
 
@@ -274,7 +284,7 @@ function App() {
         console.log('[App] Deleting person:', personId);
 
         try {
-            const res = await fetch(`${API.people}/${personId}`, {
+            const res = await authFetch(`${API.people}/${personId}`, {
                 method: 'DELETE',
             });
 
@@ -301,7 +311,7 @@ function App() {
 
         try {
             if (isEditing && editingPerson) {
-                await fetch(`${API.people}/${editingPerson.id}`, {
+                await authFetch(`${API.people}/${editingPerson.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -312,7 +322,7 @@ function App() {
                     }),
                 });
             } else {
-                const createRes = await fetch(API.people, {
+                const createRes = await authFetch(API.people, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -329,7 +339,7 @@ function App() {
                 // Register face embedding
                 if (data.faceImageBase64) {
                     console.log('[App] Registering face for:', person.id);
-                    const faceRes = await fetch(API.registerFace(person.id), {
+                    const faceRes = await authFetch(API.registerFace(person.id), {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -380,7 +390,7 @@ function App() {
 
     // Landing page
     if (!isDemoActive) {
-        return <LandingPage onStartDemo={() => setIsDemoActive(true)} />;
+        return <LandingPage onStartDemo={() => setIsDemoActive(true)} user={user} onSignIn={signInWithGoogle} />;
     }
 
     // Camera error

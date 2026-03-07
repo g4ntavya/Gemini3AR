@@ -9,7 +9,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { Person } from '../types';
-import { API } from '../config/api';
+import { API, authFetch } from '../config/api';
 
 interface AskGeminiButtonProps {
     onResponse: (response: GeminiResponse) => void;
@@ -72,7 +72,7 @@ export function AskGeminiButton({ onResponse }: AskGeminiButtonProps) {
                     formData.append('audio', audioBlob, 'query.webm');
 
                     console.log(`[AskGemini] Sending query... (${audioBlob.size} bytes, ${duration}ms)`);
-                    const res = await fetch(API.askGemini, {
+                    const res = await authFetch(API.askGemini, {
                         method: 'POST',
                         body: formData,
                     });

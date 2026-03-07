@@ -38,6 +38,7 @@ def init_database():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS people (
             id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL DEFAULT '',
             name TEXT NOT NULL,
             relation TEXT NOT NULL,
             last_met TEXT NOT NULL,
@@ -49,16 +50,22 @@ def init_database():
         )
     """)
     
-    # Migration: Add face_image column if it doesn't exist (for existing databases)
+    # Migration: Add columns if they don't exist (for existing databases)
     cursor.execute("PRAGMA table_info(people)")
     columns = [row[1] for row in cursor.fetchall()]
     if 'face_image' not in columns:
         cursor.execute("ALTER TABLE people ADD COLUMN face_image TEXT")
         print("[DB] Added face_image column to existing table")
+    if 'user_id' not in columns:
+        cursor.execute("ALTER TABLE people ADD COLUMN user_id TEXT NOT NULL DEFAULT ''")
+        print("[DB] Added user_id column to existing table")
     
-    # Index for faster name lookups
+    # Index for faster lookups
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_people_name ON people(name)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_people_user_id ON people(user_id)
     """)
     
     conn.commit()
@@ -71,6 +78,7 @@ def add_person(
     relation: str,
     last_met: str,
     context: str,
+    user_id: str = '',
     embedding: Optional[np.ndarray] = None,
     face_image: Optional[str] = None
 ) -> bool:
@@ -88,11 +96,11 @@ def add_person(
     
     try:
         cursor.execute("""
-            INSERT INTO people (id, name, relation, last_met, context, embedding, face_image)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (person_id, name, relation, last_met, context, embedding_json, face_image))
+            INSERT INTO people (id, user_id, name, relation, last_met, context, embedding, face_image)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (person_id, user_id, name, relation, last_met, context, embedding_json, face_image))
         conn.commit()
-        print(f"[DB] Added person: {name} ({person_id})")
+        print(f"[DB] Added person: {name} ({person_id}) for user {user_id[:8]}")
         return True
     except sqlite3.IntegrityError:
         print(f"[DB] Person already exists: {person_id}")
@@ -176,16 +184,16 @@ def get_person(person_id: str) -> Optional[dict]:
     return None
 
 
-def get_all_people_with_embeddings() -> List[Tuple[dict, Optional[np.ndarray]]]:
+def get_all_people_with_embeddings(user_id: str = '') -> List[Tuple[dict, Optional[np.ndarray]]]:
     """
-    Get all people who have embeddings.
+    Get all people who have embeddings for a specific user.
     Returns list of (person_dict, embedding_array) tuples.
     Used for face matching.
     """
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT * FROM people WHERE embedding IS NOT NULL")
+    cursor.execute("SELECT * FROM people WHERE embedding IS NOT NULL AND user_id = ?", (user_id,))
     rows = cursor.fetchall()
     
     results = []
@@ -201,21 +209,21 @@ def get_all_people_with_embeddings() -> List[Tuple[dict, Optional[np.ndarray]]]:
     return results
 
 
-def get_all_people() -> List[dict]:
-    """Get all people (without embeddings)."""
+def get_all_people(user_id: str = '') -> List[dict]:
+    """Get all people (without embeddings) for a specific user."""
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT id, name, relation, last_met, context, face_image FROM people")
+    cursor.execute("SELECT id, name, relation, last_met, context, face_image FROM people WHERE user_id = ?", (user_id,))
     return [dict(row) for row in cursor.fetchall()]
 
 
-def get_all_people_lightweight() -> List[dict]:
+def get_all_people_lightweight(user_id: str = '') -> List[dict]:
     """Get all people without face_image or embedding (for prompt context)."""
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT id, name, relation, last_met, context FROM people")
+    cursor.execute("SELECT id, name, relation, last_met, context FROM people WHERE user_id = ?", (user_id,))
     return [dict(row) for row in cursor.fetchall()]
 
 
@@ -316,10 +324,11 @@ def sync_from_firestore(firestore_people: list):
                 embedding_json = json.dumps(person["embedding"])
             
             cursor.execute("""
-                INSERT OR REPLACE INTO people (id, name, relation, last_met, context, embedding, face_image)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT OR REPLACE INTO people (id, user_id, name, relation, last_met, context, embedding, face_image)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 person_id,
+                person.get("user_id", ""),
                 person.get("name", ""),
                 person.get("relation", ""),
                 person.get("last_met", ""),

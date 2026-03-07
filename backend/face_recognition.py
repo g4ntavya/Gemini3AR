@@ -74,6 +74,7 @@ class FaceRecognizer:
                     # Create person dict without embedding array
                     person = {
                         "id": person_id,
+                        "user_id": person_data.get("user_id", ""),
                         "name": person_data.get("name", ""),
                         "relation": person_data.get("relation", ""),
                         "context": person_data.get("context", ""),
@@ -109,10 +110,11 @@ class FaceRecognizer:
         self._cache.clear()
         print(f"[FaceRec] Cache cleared ({count} entries)")
     
-    def add_to_cache(self, person_id: str, person_data: dict, embedding: np.ndarray):
+    def add_to_cache(self, person_id: str, person_data: dict, embedding: np.ndarray, user_id: str = ''):
         """Add newly registered face to cache."""
-        self._cache[person_id] = (person_data, embedding)
-        print(f"[FaceRec] Added to cache: {person_data.get('name')} (total: {len(self._cache)})")
+        person_with_uid = {**person_data, 'user_id': user_id}
+        self._cache[person_id] = (person_with_uid, embedding)
+        print(f"[FaceRec] Added to cache: {person_data.get('name')} user={user_id[:8]} (total: {len(self._cache)})")
     
     def remove_from_cache(self, person_id: str):
         """Remove from cache."""
@@ -171,8 +173,8 @@ class FaceRecognizer:
         """
         return float(np.dot(emb1, emb2))
     
-    def find_match(self, query_embedding: np.ndarray) -> Tuple[Optional[dict], float]:
-        """Find best match above threshold from cache."""
+    def find_match(self, query_embedding: np.ndarray, user_id: str = '') -> Tuple[Optional[dict], float]:
+        """Find best match above threshold from cache, scoped to user_id."""
         if not self._cache:
             return None, 0.0
         
@@ -180,6 +182,9 @@ class FaceRecognizer:
         best_score = 0.0
         
         for person_id, (person, embedding) in self._cache.items():
+            # Only match against this user's people
+            if person.get('user_id', '') != user_id:
+                continue
             score = self.compute_similarity(query_embedding, embedding)
             if score >= self.SIMILARITY_THRESHOLD and score > best_score:
                 best_score = score
@@ -187,13 +192,13 @@ class FaceRecognizer:
         
         return best_match, best_score
     
-    def recognize(self, image_base64: str) -> Tuple[Optional[dict], float, Optional[np.ndarray]]:
-        """Full recognition pipeline."""
+    def recognize(self, image_base64: str, user_id: str = '') -> Tuple[Optional[dict], float, Optional[np.ndarray]]:
+        """Full recognition pipeline, scoped to user_id."""
         embedding = self.get_embedding_from_base64(image_base64)
         if embedding is None:
             return None, 0.0, None
         
-        person, score = self.find_match(embedding)
+        person, score = self.find_match(embedding, user_id)
         return person, score, embedding
 
 

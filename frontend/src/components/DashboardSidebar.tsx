@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Person } from '../types';
-import { API } from '../config/api';
+import { API, authFetch } from '../config/api';
 import { SwipeableCard } from './SwipeableCard';
 
 interface DashboardSidebarProps {
@@ -29,7 +29,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
     const fetchPeople = async () => {
         setLoading(true);
         try {
-            const res = await fetch(API.people);
+            const res = await authFetch(API.people);
             if (res.ok) {
                 const data = await res.json();
                 setPeople(data);
@@ -81,7 +81,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
         const newContext = prompt('Edit context:', person.context || '');
 
         try {
-            const res = await fetch(`${API.people}/${person.id}`, {
+            const res = await authFetch(`${API.people}/${person.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -108,7 +108,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
     const handleDelete = useCallback((person: Person) => {
         if (!confirm(`Delete ${person.name}? This cannot be undone.`)) return;
 
-        fetch(`${API.people}/${person.id}`, {
+        authFetch(`${API.people}/${person.id}`, {
             method: 'DELETE'
         }).then(res => {
             if (res.ok) {
