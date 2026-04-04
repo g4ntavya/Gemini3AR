@@ -126,13 +126,13 @@ export function RegionSelector({ currentRegion, regions, onSelect }: RegionSelec
                                     </span>
                                     <div className="flex-1 min-w-0">
                                         <div 
-                                            className="text-sm text-black/80 truncate"
+                                            className="text-sm text-black truncate"
                                             style={{ fontFamily: 'HelveticaNeue-Light' }}
                                         >
                                             {region.name}
                                         </div>
                                         <div 
-                                            className="text-xs text-black/40 truncate"
+                                            className="text-xs text-black/70 truncate"
                                             style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
                                         >
                                             {region.languages.slice(0, 3).join(', ')}

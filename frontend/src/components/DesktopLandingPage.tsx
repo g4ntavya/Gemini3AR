@@ -655,12 +655,14 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
                                                             Log Out
                                                         </button>
                                                     )}
-                                                    {/* Region Selector - always visible, next to auth buttons */}
-                                                    <RegionSelector
-                                                        currentRegion={region}
-                                                        regions={allRegions}
-                                                        onSelect={onRegionChange}
-                                                    />
+                                                    {/* Region Selector - only visible after signing in */}
+                                                    {user && (
+                                                        <RegionSelector
+                                                            currentRegion={region}
+                                                            regions={allRegions}
+                                                            onSelect={onRegionChange}
+                                                        />
+                                                    )}
                                                 </div>
                                                 <p
                                                     className="text-black text-[10px] sm:text-xs mt-2 opacity-0"

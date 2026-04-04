@@ -6,9 +6,9 @@ A real-time face recognition system with AR overlays, designed to help people wi
 
 ## Demo Video
 
-[![RemindAR Demo](https://img.youtube.com/vi/6O9ROb6sgGM/maxresdefault.jpg)](https://youtu.be/6O9ROb6sgGM)
+[![RemindAR Demo](https://img.youtube.com/vi/m9yXQxvuMcw/hqdefault.jpg)](https://youtu.be/m9yXQxvuMcw)
 
-[Watch on YouTube](https://youtu.be/6O9ROb6sgGM)
+[Watch on YouTube](https://youtu.be/m9yXQxvuMcw)
 
 ---
 

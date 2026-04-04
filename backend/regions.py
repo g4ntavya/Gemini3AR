@@ -183,7 +183,7 @@ REGIONS: Dict[str, RegionInfo] = {
     'ZW': RegionInfo('ZW', 'Zimbabwe', ['English', 'Shona', 'Ndebele'], 'Zimbabwean English accent'),
 }
 
-DEFAULT_REGION_CODE = 'US'
+DEFAULT_REGION_CODE = 'IN'
 
 
 def get_region(code: str) -> Optional[RegionInfo]:

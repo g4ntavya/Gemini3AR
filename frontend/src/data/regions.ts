@@ -181,7 +181,7 @@ export function getRegionByCode(code: string): Region | undefined {
 }
 
 // Default region
-export const DEFAULT_REGION_CODE = 'US';
+export const DEFAULT_REGION_CODE = 'IN';
 
 // Build the prompt hint for Gemini based on region
 export function buildLanguageHint(region: Region): string {
