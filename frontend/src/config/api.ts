@@ -7,10 +7,21 @@ const API_BASE = isProd ? 'https://api.remindar.tech' : '';
 // ---- Auth-aware fetch ----
 
 let _getToken: (() => Promise<string | null>) | null = null;
+let _getRegion: (() => string) | null = null;
 
 /** Call once from App.tsx to wire up Firebase auth token getter */
 export function setTokenGetter(fn: () => Promise<string | null>) {
     _getToken = fn;
+}
+
+/** Call once from App.tsx to wire up region getter */
+export function setRegionGetter(fn: () => string) {
+    _getRegion = fn;
+}
+
+/** Get current region code */
+export function getCurrentRegion(): string | null {
+    return _getRegion ? _getRegion() : null;
 }
 
 /** fetch() wrapper that automatically attaches Authorization: Bearer <token> */

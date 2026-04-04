@@ -9,7 +9,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { Person } from '../types';
-import { API, authFetch } from '../config/api';
+import { API, authFetch, getCurrentRegion } from '../config/api';
 
 interface AskGeminiButtonProps {
     onResponse: (response: GeminiResponse) => void;
@@ -70,8 +70,14 @@ export function AskGeminiButton({ onResponse }: AskGeminiButtonProps) {
                 try {
                     const formData = new FormData();
                     formData.append('audio', audioBlob, 'query.webm');
+                    
+                    // Add region for language/accent optimization
+                    const region = getCurrentRegion();
+                    if (region) {
+                        formData.append('region', region);
+                    }
 
-                    console.log(`[AskGemini] Sending query... (${audioBlob.size} bytes, ${duration}ms)`);
+                    console.log(`[AskGemini] Sending query... (${audioBlob.size} bytes, ${duration}ms)`, region ? `region: ${region}` : '');
                     const res = await authFetch(API.askGemini, {
                         method: 'POST',
                         body: formData,

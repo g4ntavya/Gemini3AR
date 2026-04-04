@@ -10,18 +10,28 @@ It must NEVER answer general knowledge, weather, trivia, etc.
 
 import json
 import base64
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from database import get_all_people_lightweight
 from gemini_client import call_gemini
+from regions import build_language_hint
 
 
-async def process_gemini_query(audio_bytes: bytes, user_id: str = "") -> Dict[str, Any]:
+async def process_gemini_query(
+    audio_bytes: bytes,
+    user_id: str = "",
+    region_code: Optional[str] = None
+) -> Dict[str, Any]:
     """
     Process a voice query about people context.
 
     Single Gemini call: transcribes audio AND searches people in one shot.
     Anti-hallucination: prompt explicitly restricts answers to database content only.
+    
+    Args:
+        audio_bytes: Raw audio data
+        user_id: User ID for database filtering
+        region_code: ISO 3166-1 alpha-2 country code for language/accent hints
 
     Returns:
         {
@@ -53,12 +63,18 @@ async def process_gemini_query(audio_bytes: bytes, user_id: str = "") -> Dict[st
             for p in people
         ]
 
+        # Build language hint if region is provided
+        language_hint = ""
+        if region_code:
+            language_hint = f"\n{build_language_hint(region_code)}\n"
+            print(f"[AskGemini] Using region: {region_code}")
+
         # ── Single prompt: transcribe + search + respond ──
         # Anti-hallucination guardrail is embedded directly in the system instruction.
         prompt = f"""You are a memory assistant for a person who has difficulty remembering faces.
 You will hear a voice query. Do these steps:
-
-1. TRANSCRIBE what was said (Hindi/Hinglish → Roman letters, not Devanagari).
+{language_hint}
+1. TRANSCRIBE what was said (for non-Latin scripts use Roman/Latin transliteration).
 2. SEARCH the people database below for relevant matches.
 3. RESPOND with a friendly, helpful answer BASED ONLY ON THE DATABASE.
 

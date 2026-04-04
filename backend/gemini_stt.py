@@ -10,6 +10,7 @@ from typing import Optional
 from dataclasses import dataclass
 
 from gemini_client import call_gemini
+from regions import build_language_hint, DEFAULT_REGION_CODE
 
 
 @dataclass
@@ -23,12 +24,12 @@ class TranscriptionResult:
     success: bool = True
 
 
-# ── Prompt (kept concise — examples are the best guidance for Gemini) ──
+# ── Base prompt (region hint is prepended dynamically) ──
 
-_STT_EXTRACT_PROMPT = """Listen to this audio and respond with JSON only (no markdown).
+_STT_EXTRACT_PROMPT_BASE = """Listen to this audio and respond with JSON only (no markdown).
 
 Tasks:
-1. TRANSCRIBE exactly what was said. Hindi/Hinglish → Roman letters, not Devanagari.
+1. TRANSCRIBE exactly what was said. For non-Latin scripts (Hindi, Arabic, Urdu, etc.) use Roman/Latin transliteration, not native scripts.
 2. EXTRACT if mentioned: name (proper noun), relation (Friend/Family/Brother/Sister/Doctor/Colleague/Neighbor/Other), context (≤10 words, English).
 
 Examples:
@@ -37,9 +38,25 @@ Examples:
 - "Amit bhai doctor hai" → {"transcription":"Amit bhai doctor hai","language":"hinglish","name":"Amit","relation":"Brother","context":"is a doctor"}
 
 JSON format:
-{"transcription":"...","language":"en|hi|hinglish","name":"extracted or null","relation":"extracted or null","context":"extracted or null"}"""
+{"transcription":"...","language":"detected language code","name":"extracted or null","relation":"extracted or null","context":"extracted or null"}"""
 
-_STT_ONLY_PROMPT = """Transcribe this audio exactly as spoken. Hindi/Hinglish → Roman letters. Output ONLY the transcription text, nothing else."""
+_STT_ONLY_PROMPT_BASE = """Transcribe this audio exactly as spoken. For non-Latin scripts use Roman/Latin transliteration. Output ONLY the transcription text, nothing else."""
+
+
+def _build_stt_extract_prompt(region_code: Optional[str] = None) -> str:
+    """Build the STT + extraction prompt with region-specific language hints."""
+    if region_code:
+        language_hint = build_language_hint(region_code)
+        return f"{language_hint}\n\n{_STT_EXTRACT_PROMPT_BASE}"
+    return _STT_EXTRACT_PROMPT_BASE
+
+
+def _build_stt_only_prompt(region_code: Optional[str] = None) -> str:
+    """Build the simple STT prompt with region-specific language hints."""
+    if region_code:
+        language_hint = build_language_hint(region_code)
+        return f"{language_hint}\n\n{_STT_ONLY_PROMPT_BASE}"
+    return _STT_ONLY_PROMPT_BASE
 
 
 def _clean(val):
@@ -92,10 +109,16 @@ def _parse_stt_response(raw: str) -> TranscriptionResult:
 async def transcribe_and_extract_with_gemini(
     audio_data: bytes,
     mime_type: str = "audio/webm",
+    region_code: Optional[str] = None,
 ) -> TranscriptionResult:
     """
     Transcribe audio and extract structured info using Gemini Flash.
     Single API call — non-blocking, with timeout.
+    
+    Args:
+        audio_data: Raw audio bytes
+        mime_type: Audio MIME type
+        region_code: ISO 3166-1 alpha-2 country code for language/accent hints
     """
     if not audio_data:
         return TranscriptionResult(text="", success=False)
@@ -107,7 +130,13 @@ async def transcribe_and_extract_with_gemini(
         }
     }
 
-    raw = await call_gemini([_STT_EXTRACT_PROMPT, audio_part], timeout=12.0)
+    # Build prompt with region-specific language hints
+    prompt = _build_stt_extract_prompt(region_code)
+    
+    if region_code:
+        print(f"[Gemini STT] Using region: {region_code}")
+    
+    raw = await call_gemini([prompt, audio_part], timeout=12.0)
 
     if not raw:
         return TranscriptionResult(text="", success=False)
@@ -121,8 +150,16 @@ async def transcribe_and_extract_with_gemini(
 async def transcribe_only_with_gemini(
     audio_data: bytes,
     mime_type: str = "audio/webm",
+    region_code: Optional[str] = None,
 ) -> Optional[str]:
-    """Simple transcription without extraction."""
+    """
+    Simple transcription without extraction.
+    
+    Args:
+        audio_data: Raw audio bytes
+        mime_type: Audio MIME type
+        region_code: ISO 3166-1 alpha-2 country code for language/accent hints
+    """
     if not audio_data:
         return None
 
@@ -133,4 +170,7 @@ async def transcribe_only_with_gemini(
         }
     }
 
-    return await call_gemini([_STT_ONLY_PROMPT, audio_part], timeout=10.0)
+    # Build prompt with region-specific language hints
+    prompt = _build_stt_only_prompt(region_code)
+
+    return await call_gemini([prompt, audio_part], timeout=10.0)

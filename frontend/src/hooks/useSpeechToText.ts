@@ -4,7 +4,7 @@
  */
 
 import { useRef, useCallback, useReducer } from 'react';
-import { API, authFetch } from '../config/api';
+import { API, authFetch, getCurrentRegion } from '../config/api';
 
 interface ExtractedInfo {
     name: string | null;
@@ -191,8 +191,14 @@ export function useSpeechToText() {
                 try {
                     const formData = new FormData();
                     formData.append('audio', audioBlob, 'recording.webm');
+                    
+                    // Add region for language/accent optimization
+                    const region = getCurrentRegion();
+                    if (region) {
+                        formData.append('region', region);
+                    }
 
-                    console.log('[STT] Sending to Gemini...');
+                    console.log('[STT] Sending to Gemini...', region ? `(region: ${region})` : '');
                     const response = await authFetch(API.transcribeAndExtract, {
                         method: 'POST',
                         body: formData,

@@ -425,20 +425,28 @@ async def refresh_cache():
     }
 
 
-from fastapi import File, UploadFile
+from fastapi import File, UploadFile, Form
 
 @app.post("/api/transcribe-and-extract")
-async def api_transcribe_and_extract(audio: UploadFile = File(...), user_id: str = Depends(get_current_user)):
+async def api_transcribe_and_extract(
+    audio: UploadFile = File(...),
+    region: Optional[str] = Form(None),
+    user_id: str = Depends(get_current_user)
+):
     """
     Transcribe audio AND extract structured info in ONE Gemini call.
-    Primary endpoint for voice input. Handles English, Hindi, Hinglish seamlessly.
+    Primary endpoint for voice input. Handles multilingual audio based on region.
+
+    Args:
+        audio: Audio file to transcribe
+        region: ISO 3166-1 alpha-2 country code (e.g., 'US', 'IN', 'FR') for language optimization
 
     Returns:
     - text: Full transcription
     - name: Extracted person name
     - relation: Extracted relationship
     - context: Extracted context/memory
-    - language: Detected language (en, hi, hinglish)
+    - language: Detected language
     """
     from gemini_stt import transcribe_and_extract_with_gemini
     
@@ -454,9 +462,9 @@ async def api_transcribe_and_extract(audio: UploadFile = File(...), user_id: str
         elif audio.filename.endswith(".webm"):
             mime_type = "audio/webm"
     
-    print(f"[API] Transcribe+Extract: {len(audio_bytes)} bytes, type: {mime_type}")
+    print(f"[API] Transcribe+Extract: {len(audio_bytes)} bytes, type: {mime_type}, region: {region}")
     
-    result = await transcribe_and_extract_with_gemini(audio_bytes, mime_type)
+    result = await transcribe_and_extract_with_gemini(audio_bytes, mime_type, region_code=region)
     
     return {
         "text": result.text,
@@ -470,19 +478,27 @@ async def api_transcribe_and_extract(audio: UploadFile = File(...), user_id: str
 
 
 @app.post("/api/ask-gemini")
-async def api_ask_gemini(audio: UploadFile = File(...), user_id: str = Depends(get_current_user)):
+async def api_ask_gemini(
+    audio: UploadFile = File(...),
+    region: Optional[str] = Form(None),
+    user_id: str = Depends(get_current_user)
+):
     """
     Ask Gemini about people context.
     
     Takes audio query like "Who did I talk to about coffee?"
     Returns natural language response with matched people.
+    
+    Args:
+        audio: Audio file with the query
+        region: ISO 3166-1 alpha-2 country code for language optimization
     """
     from ask_gemini import process_gemini_query
     
     audio_bytes = await audio.read()
-    print(f"[API] Ask Gemini: {len(audio_bytes)} bytes")
+    print(f"[API] Ask Gemini: {len(audio_bytes)} bytes, region: {region}")
     
-    result = await process_gemini_query(audio_bytes, user_id=user_id)
+    result = await process_gemini_query(audio_bytes, user_id=user_id, region_code=region)
     
     return result
 
@@ -605,8 +621,10 @@ async def update_person(person_id: str, person: PersonCreate, user_id: str = Dep
     recognizer = get_recognizer()
     recognizer.update_person_data(person_id, updated_person)
     
-    # Sync to Firebase
-    sync_person_to_firebase(updated_person, user_id=user_id)
+    # Sync to Firebase (skip for admin — admin edits stay local only)
+    from config import ADMIN_UID
+    if user_id != ADMIN_UID:
+        sync_person_to_firebase(updated_person, user_id=user_id)
     
     # Broadcast to all clients so UI updates immediately
     await broadcast_to_all({
@@ -669,7 +687,16 @@ async def register_face(person_id: str, face_data: FaceData, user_id: str = Depe
 @app.delete("/people/{person_id}")
 async def remove_person(person_id: str, user_id: str = Depends(get_current_user)):
     """Delete a person from the database (soft-delete in Firebase)."""
-    success = delete_person(person_id)
+    from config import ADMIN_UID
+    
+    # Admin: hard delete from SQLite, skip Firebase (data preserved there)
+    # Others: soft-delete in SQLite + Firebase
+    if user_id == ADMIN_UID:
+        from database import hard_delete_person
+        success = hard_delete_person(person_id)
+    else:
+        success = delete_person(person_id)
+    
     if not success:
         raise HTTPException(status_code=404, detail="Person not found")
     
@@ -677,8 +704,9 @@ async def remove_person(person_id: str, user_id: str = Depends(get_current_user)
     recognizer = get_recognizer()
     recognizer.remove_from_cache(person_id)
     
-    # Soft-delete in Firebase (marks deleted: true, keeps data)
-    delete_person_from_firebase(person_id, user_id=user_id)
+    # Soft-delete in Firebase (skip for admin — admin deletes are local only, Firebase preserved)
+    if user_id != ADMIN_UID:
+        delete_person_from_firebase(person_id, user_id=user_id)
     
     # Broadcast deletion to all clients
     await broadcast_to_all({

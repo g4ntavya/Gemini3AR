@@ -15,9 +15,10 @@ import { GeminiResponseOverlay } from './components/GeminiResponseOverlay';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useFaceDetection } from './hooks/useFaceDetection';
 import { useAuth } from './hooks/useAuth';
+import { useUserRegion } from './hooks/useUserRegion';
 import { cropFaceFromVideo } from './utils/faceUtils';
 import { Person, TrackedFace } from './types';
-import { API, authFetch, setTokenGetter } from './config/api';
+import { API, authFetch, setTokenGetter, setRegionGetter } from './config/api';
 import { killAllStreams } from './utils/mediaStreamTracker';
 
 // Recognition settings
@@ -33,10 +34,18 @@ function App() {
     // Auth
     const { user, signInWithGoogle, logout, getIdToken } = useAuth();
 
+    // Region selection for voice optimization
+    const { regionCode, region, setRegionCode, allRegions } = useUserRegion();
+
     // Wire up auth token for all API calls
     useEffect(() => {
         setTokenGetter(getIdToken);
     }, [getIdToken]);
+
+    // Wire up region getter for API calls
+    useEffect(() => {
+        setRegionGetter(() => regionCode);
+    }, [regionCode]);
 
     // Registration/Modify modal state
     const [showModal, setShowModal] = useState(false);
@@ -390,7 +399,17 @@ function App() {
 
     // Landing page
     if (!isDemoActive) {
-        return <LandingPage onStartDemo={() => setIsDemoActive(true)} user={user} onSignIn={signInWithGoogle} onLogout={logout} />;
+        return (
+            <LandingPage
+                onStartDemo={() => setIsDemoActive(true)}
+                user={user}
+                onSignIn={signInWithGoogle}
+                onLogout={logout}
+                region={region}
+                allRegions={allRegions}
+                onRegionChange={setRegionCode}
+            />
+        );
     }
 
     // Camera error

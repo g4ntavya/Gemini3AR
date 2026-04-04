@@ -5,7 +5,9 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
 import GlassesModel, { GlassesModelHandle } from './GlassesModel';
 import SplitText from './SplitText';
+import { RegionSelector } from './RegionSelector';
 import type { User } from 'firebase/auth';
+import type { Region } from '../data/regions';
 
 // Register ScrollTrigger plugin
 gsap.registerPlugin(ScrollTrigger);
@@ -16,9 +18,12 @@ interface LandingPageProps {
     user: User | null;
     onSignIn: () => void;
     onLogout: () => void;
+    region: Region | undefined;
+    allRegions: Region[];
+    onRegionChange: (code: string) => void;
 }
 
-export function LandingPage({ onStartDemo, user, onSignIn, onLogout }: LandingPageProps) {
+export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, allRegions, onRegionChange }: LandingPageProps) {
     const wrapperRef = useRef<HTMLDivElement>(null);
     const heroRef = useRef<HTMLElement>(null);
     const bgRef = useRef<HTMLImageElement>(null);
@@ -650,6 +655,12 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout }: LandingPa
                                                             Log Out
                                                         </button>
                                                     )}
+                                                    {/* Region Selector - always visible, next to auth buttons */}
+                                                    <RegionSelector
+                                                        currentRegion={region}
+                                                        regions={allRegions}
+                                                        onSelect={onRegionChange}
+                                                    />
                                                 </div>
                                                 <p
                                                     className="text-black text-[10px] sm:text-xs mt-2 opacity-0"

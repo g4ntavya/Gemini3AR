@@ -220,12 +220,12 @@ def get_all_people_with_embeddings(user_id: str = '', load_all: bool = False) ->
 
 
 def get_all_people(user_id: str = '') -> List[dict]:
-    """Get all people (without embeddings). Admin sees ALL users' entries."""
+    """Get all people (without embeddings). Admin sees ALL entries including deleted."""
     conn = get_connection()
     cursor = conn.cursor()
     
     if user_id == ADMIN_UID:
-        cursor.execute("SELECT id, name, relation, last_met, context, face_image FROM people WHERE is_deleted = 0")
+        cursor.execute("SELECT id, user_id, name, relation, last_met, context, face_image, is_deleted FROM people")
     else:
         cursor.execute("SELECT id, name, relation, last_met, context, face_image FROM people WHERE user_id = ? AND is_deleted = 0", (user_id,))
     return [dict(row) for row in cursor.fetchall()]
@@ -237,7 +237,7 @@ def get_all_people_lightweight(user_id: str = '') -> List[dict]:
     cursor = conn.cursor()
     
     if user_id == ADMIN_UID:
-        cursor.execute("SELECT id, name, relation, last_met, context FROM people WHERE is_deleted = 0")
+        cursor.execute("SELECT id, name, relation, last_met, context, is_deleted FROM people")
     else:
         cursor.execute("SELECT id, name, relation, last_met, context FROM people WHERE user_id = ? AND is_deleted = 0", (user_id,))
     return [dict(row) for row in cursor.fetchall()]
@@ -254,6 +254,20 @@ def delete_person(person_id: str) -> bool:
     
     if success:
         print(f"[DB] Soft-deleted person: {person_id}")
+    return success
+
+
+def hard_delete_person(person_id: str) -> bool:
+    """Permanently remove a person from SQLite. Used by admin (Firebase preserved separately)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("DELETE FROM people WHERE id = ?", (person_id,))
+    success = cursor.rowcount > 0
+    conn.commit()
+    
+    if success:
+        print(f"[DB] Hard-deleted person: {person_id}")
     return success
 
 
