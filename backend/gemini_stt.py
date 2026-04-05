@@ -30,24 +30,41 @@ _STT_EXTRACT_PROMPT_BASE = """Listen to this audio and respond with JSON only (n
 
 Tasks:
 1. TRANSCRIBE exactly what was said. For non-Latin scripts (Hindi, Arabic, Urdu, etc.) use Roman/Latin transliteration, not native scripts.
-2. DETECT the primary language spoken (use ISO 639-1 code: en, hi, zh, ar, es, fr, etc.). If mixed languages (e.g., Hinglish), use "en".
+2. DETECT the primary language spoken (use ISO 639-1 code: en, hi, zh, ar, es, fr, etc.)
 3. EXTRACT if mentioned:
    - name: person's name in ORIGINAL language/script (if single non-English language) OR English (if English or mixed)
    - relation: relationship type in ORIGINAL language (if single non-English language) OR English (if English or mixed)
    - context: additional details in ORIGINAL language (if single non-English language) OR English (if English or mixed)
    
-IMPORTANT RULES:
-- Keep relation and context separate. Do NOT include relation words in context.
-- If purely non-English (e.g., Chinese, Arabic, Spanish), extract name/relation/context in that language's native script
-- If English or mixed languages (e.g., Hinglish), extract in English only
-- Mixed = any combination of English + another language
+CRITICAL LANGUAGE DETECTION RULES:
+- Identify the PRIMARY language based on sentence structure and majority of words
+- Common loanwords (e.g., "society", "college", "friend" in Hindi/Urdu) do NOT make it mixed
+- Only mark as "en" (English/mixed) if BOTH languages are used substantially in sentence structure
+- Examples of loanwords that should be IGNORED when detecting language:
+  * Hindi/Urdu: society, college, friend, school, office, hospital, market, phone, computer
+  * Spanish: okay, internet, email, wifi
+  * Chinese: okay, computer, internet
+- If 70%+ of words are in one language, use that language code even if loanwords are present
+
+Language Detection Examples:
+- "Yeh mera dost hai hum society me rehte hai" → PRIMARY: Hindi (hi) - "society" is a loanword
+- "Ye mera college friend Arjun hai" → PRIMARY: English (en) - "college friend" shows English structure mixing
+- "这是我的朋友，他在 Google 工作" → PRIMARY: Chinese (zh) - "Google" is just a name
+- "This is my friend daksh aur hum saath me rehte hai" → PRIMARY: English (en) - true code-switching
+
+Extraction Rules:
+- If purely non-English (hi, zh, ar, es, etc.), extract name/relation/context in that language's native script
+- If English or true mixed languages, extract everything in English only
 
 Examples:
-- "Yeh mera college friend Arjun hai" → {"transcription":"Yeh mera college friend Arjun hai","language":"en","name":"Arjun","relation":"Friend","context":"from college"}
+- "Ye mera dost Daksh hai hum society me rehte hai" → {"transcription":"Ye mera dost Daksh hai hum society me rehte hai","language":"hi","name":"दक्ष","relation":"दोस्त","context":"सोसाइटी में रहते हैं"}
+- "Yeh mera college friend Arjun hai" → {"transcription":"Yeh mera college friend Arjun hai","language":"en","name":"Arjun","relation":"College Friend","context":""}
 - "这是我的朋友李明" → {"transcription":"Zhe shi wo de pengyou Li Ming","language":"zh","name":"李明","relation":"朋友","context":""}
-- "هذا صديقي أحمد" → {"transcription":"Hatha sadiqi Ahmad","language":"ar","name":"أحمد","relation":"صديق","context":""}
+- "هذا صديقي أحمد من المستشفى" → {"transcription":"Hatha sadiqi Ahmad min al-mustashfa","language":"ar","name":"أحمد","relation":"صديق","context":"من المستشفى"}
 - "This is my sister Priya, she lives in Delhi" → {"transcription":"This is my sister Priya, she lives in Delhi","language":"en","name":"Priya","relation":"Sister","context":"lives in Delhi"}
-- "This is my best friend Sarah, we met at the park" → {"transcription":"This is my best friend Sarah, we met at the park","language":"en","name":"Sarah","relation":"Best Friend","context":"met at park"}
+- "This is my friend Rohan aur hum saath me kaam karte hai" → {"transcription":"This is my friend Rohan aur hum saath me kaam karte hai","language":"en","name":"Rohan","relation":"Friend","context":"work together"}
+
+IMPORTANT: Keep relation and context separate. Do NOT include relation words in context.
 
 JSON format:
 {"transcription":"...","language":"ISO 639-1 code","name":"extracted or null","relation":"extracted or null","context":"extracted or null"}"""
