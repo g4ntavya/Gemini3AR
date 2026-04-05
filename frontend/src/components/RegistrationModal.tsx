@@ -22,6 +22,7 @@ export interface RegistrationData {
     lastMet: string;
     context: string;
     faceImageBase64?: string;
+    language: string;  // ISO 639-1 language code
 }
 
 export function RegistrationModal({
@@ -35,6 +36,7 @@ export function RegistrationModal({
     const [name, setName] = useState('');
     const [relation, setRelation] = useState('');
     const [context, setContext] = useState('');
+    const [language, setLanguage] = useState('en');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const prevUpdateKeyRef = useRef(0);
@@ -59,10 +61,12 @@ export function RegistrationModal({
                 setName(existingPerson.name || '');
                 setRelation(existingPerson.relation || '');
                 setContext(existingPerson.context || '');
+                setLanguage(existingPerson.language || 'en');
             } else {
                 setName('');
                 setRelation('');
                 setContext('');
+                setLanguage('en');
             }
             setIsSubmitting(false);
             reset();
@@ -84,6 +88,9 @@ export function RegistrationModal({
             }
             if (extracted.context) {
                 setContext(extracted.context);
+            }
+            if (extracted.language) {
+                setLanguage(extracted.language);
             }
         }
     }, [extracted, updateKey]);
@@ -114,6 +121,7 @@ export function RegistrationModal({
             lastMet: today,
             context: context.trim(),
             faceImageBase64,
+            language: language,
         });
 
         onClose();

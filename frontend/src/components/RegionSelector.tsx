@@ -84,7 +84,7 @@ export function RegionSelector({ currentRegion, regions, onSelect }: RegionSelec
             {/* Dropdown Menu */}
             {isOpen && (
                 <div 
-                    className="absolute right-0 mt-2 w-64 sm:w-72 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-black/10 overflow-hidden"
+                    className="absolute right-0 sm:right-0 left-0 sm:left-auto mt-2 w-full sm:w-72 max-w-[90vw] sm:max-w-none bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-black/10 overflow-hidden"
                     style={{ maxHeight: '320px' }}
                 >
                     {/* Search Input */}

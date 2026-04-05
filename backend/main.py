@@ -571,6 +571,7 @@ async def create_person(person: PersonCreate, user_id: str = Depends(get_current
         relation=person.relation,
         last_met=person.last_met,
         context=person.context,
+        language=person.language,
         user_id=user_id
     )
     
@@ -609,7 +610,8 @@ async def update_person(person_id: str, person: PersonCreate, user_id: str = Dep
         name=person.name,
         relation=person.relation,
         last_met=person.last_met,
-        context=person.context
+        context=person.context,
+        language=person.language
     )
     
     if not success:

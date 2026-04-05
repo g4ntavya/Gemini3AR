@@ -328,6 +328,7 @@ function App() {
                         relation: data.relation,
                         last_met: data.lastMet,
                         context: data.context,
+                        language: data.language,
                     }),
                 });
             } else {
@@ -339,6 +340,7 @@ function App() {
                         relation: data.relation,
                         last_met: data.lastMet,
                         context: data.context,
+                        language: data.language,
                     }),
                 });
 

@@ -10,6 +10,7 @@ interface ExtractedInfo {
     name: string | null;
     relation: string | null;
     context: string | null;
+    language: string;  // ISO 639-1 language code from Gemini
 }
 
 interface STTState {
@@ -224,6 +225,7 @@ export function useSpeechToText() {
                         name: data.name || null,
                         relation: data.relation || null,
                         context: data.context || null,
+                        language: data.language || 'en',
                     };
 
                     console.log('[STT] Extracted:', info);

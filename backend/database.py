@@ -45,6 +45,7 @@ def init_database():
             relation TEXT NOT NULL,
             last_met TEXT NOT NULL,
             context TEXT NOT NULL,
+            language TEXT NOT NULL DEFAULT 'en',
             embedding TEXT,
             face_image TEXT,
             is_deleted INTEGER NOT NULL DEFAULT 0,
@@ -65,6 +66,9 @@ def init_database():
     if 'is_deleted' not in columns:
         cursor.execute("ALTER TABLE people ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0")
         print("[DB] Added is_deleted column to existing table")
+    if 'language' not in columns:
+        cursor.execute("ALTER TABLE people ADD COLUMN language TEXT NOT NULL DEFAULT 'en'")
+        print("[DB] Added language column to existing table")
     
     # Index for faster lookups
     cursor.execute("""
@@ -85,6 +89,7 @@ def add_person(
     last_met: str,
     context: str,
     user_id: str = '',
+    language: str = 'en',
     embedding: Optional[np.ndarray] = None,
     face_image: Optional[str] = None
 ) -> bool:
@@ -102,9 +107,9 @@ def add_person(
     
     try:
         cursor.execute("""
-            INSERT INTO people (id, user_id, name, relation, last_met, context, embedding, face_image)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (person_id, user_id, name, relation, last_met, context, embedding_json, face_image))
+            INSERT INTO people (id, user_id, name, relation, last_met, context, language, embedding, face_image)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (person_id, user_id, name, relation, last_met, context, language, embedding_json, face_image))
         conn.commit()
         print(f"[DB] Added person: {name} ({person_id}) for user {user_id[:8]}")
         return True
@@ -118,7 +123,8 @@ def update_person(
     name: str,
     relation: str,
     last_met: str,
-    context: str
+    context: str,
+    language: str = 'en'
 ) -> bool:
     """Update an existing person's details (not embedding)."""
     conn = get_connection()
@@ -126,9 +132,9 @@ def update_person(
     
     cursor.execute("""
         UPDATE people 
-        SET name = ?, relation = ?, last_met = ?, context = ?, updated_at = CURRENT_TIMESTAMP
+        SET name = ?, relation = ?, last_met = ?, context = ?, language = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-    """, (name, relation, last_met, context, person_id))
+    """, (name, relation, last_met, context, language, person_id))
     conn.commit()
     
     if cursor.rowcount > 0:

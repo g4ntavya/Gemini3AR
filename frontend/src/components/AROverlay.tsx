@@ -161,6 +161,7 @@ export function AROverlay({
                 const person = result?.person;
                 const relation = person?.relation || '';
                 const context = person?.context || '';
+                const language = person?.language || 'en';
                 const state = getState(face.id);
 
                 // Position: right of face
@@ -190,7 +191,7 @@ export function AROverlay({
                             onClick={() => isKnown && handleClick(face.id)}
                         >
                             {/* Text content */}
-                            <div className="face-label-text">
+                            <div className="face-label-text" data-lang={language}>
                                 {isKnown ? (
                                     <>
                                         <span className="label-name">{person?.name || 'Unknown'}</span>

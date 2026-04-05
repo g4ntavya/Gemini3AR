@@ -30,15 +30,27 @@ _STT_EXTRACT_PROMPT_BASE = """Listen to this audio and respond with JSON only (n
 
 Tasks:
 1. TRANSCRIBE exactly what was said. For non-Latin scripts (Hindi, Arabic, Urdu, etc.) use Roman/Latin transliteration, not native scripts.
-2. EXTRACT if mentioned: name (proper noun), relation (Friend/Family/Brother/Sister/Doctor/Colleague/Neighbor/Other), context (≤10 words, English).
+2. DETECT the primary language spoken (use ISO 639-1 code: en, hi, zh, ar, es, fr, etc.). If mixed languages (e.g., Hinglish), use "en".
+3. EXTRACT if mentioned:
+   - name: person's name in ORIGINAL language/script (if single non-English language) OR English (if English or mixed)
+   - relation: relationship type in ORIGINAL language (if single non-English language) OR English (if English or mixed)
+   - context: additional details in ORIGINAL language (if single non-English language) OR English (if English or mixed)
+   
+IMPORTANT RULES:
+- Keep relation and context separate. Do NOT include relation words in context.
+- If purely non-English (e.g., Chinese, Arabic, Spanish), extract name/relation/context in that language's native script
+- If English or mixed languages (e.g., Hinglish), extract in English only
+- Mixed = any combination of English + another language
 
 Examples:
-- "Yeh mera college friend Arjun hai" → {"transcription":"Yeh mera college friend Arjun hai","language":"hinglish","name":"Arjun","relation":"Friend","context":"college friend"}
+- "Yeh mera college friend Arjun hai" → {"transcription":"Yeh mera college friend Arjun hai","language":"en","name":"Arjun","relation":"Friend","context":"from college"}
+- "这是我的朋友李明" → {"transcription":"Zhe shi wo de pengyou Li Ming","language":"zh","name":"李明","relation":"朋友","context":""}
+- "هذا صديقي أحمد" → {"transcription":"Hatha sadiqi Ahmad","language":"ar","name":"أحمد","relation":"صديق","context":""}
 - "This is my sister Priya, she lives in Delhi" → {"transcription":"This is my sister Priya, she lives in Delhi","language":"en","name":"Priya","relation":"Sister","context":"lives in Delhi"}
-- "Amit bhai doctor hai" → {"transcription":"Amit bhai doctor hai","language":"hinglish","name":"Amit","relation":"Brother","context":"is a doctor"}
+- "This is my best friend Sarah, we met at the park" → {"transcription":"This is my best friend Sarah, we met at the park","language":"en","name":"Sarah","relation":"Best Friend","context":"met at park"}
 
 JSON format:
-{"transcription":"...","language":"detected language code","name":"extracted or null","relation":"extracted or null","context":"extracted or null"}"""
+{"transcription":"...","language":"ISO 639-1 code","name":"extracted or null","relation":"extracted or null","context":"extracted or null"}"""
 
 _STT_ONLY_PROMPT_BASE = """Transcribe this audio exactly as spoken. For non-Latin scripts use Roman/Latin transliteration. Output ONLY the transcription text, nothing else."""
 

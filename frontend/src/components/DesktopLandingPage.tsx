@@ -614,7 +614,7 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
                                                 {/* Auth Buttons - Sign In + Try Demo */}
                                                 <div
                                                     ref={tryDemoButtonRef}
-                                                    className="flex items-center gap-3"
+                                                    className={`flex flex-wrap items-center gap-2 sm:gap-3 ${isMobile ? 'justify-center' : 'justify-start'}`}
                                                     style={{ opacity: 0 }}
                                                 >
                                                     {!user && (

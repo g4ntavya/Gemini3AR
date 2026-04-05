@@ -1,6 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;500&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Rozha+One&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300;400;500;600&display=swap');
 
 /**
  * RemindAR - Global Styles
@@ -291,6 +294,31 @@ html {
   font-size: 18px;
   font-weight: 500;
   color: #ffffff;
+}
+
+/* ============================================
+   Multi-language Support
+   ============================================ */
+
+/* Non-English languages - Use universal fonts */
+.face-label-text[data-lang]:not([data-lang="en"]) .label-name {
+  font-family: 'Noto Sans', 'Noto Sans SC', 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.face-label-text[data-lang]:not([data-lang="en"]) .label-relation {
+  font-family: 'Noto Sans', 'Noto Sans SC', 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.face-label-text[data-lang]:not([data-lang="en"]) .label-context {
+  font-family: 'Noto Sans', 'Noto Sans SC', 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 /* ============================================

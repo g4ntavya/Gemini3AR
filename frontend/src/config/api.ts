@@ -1,8 +1,6 @@
 // API Configuration
-// In production (Vercel), hit the backend directly.
-// In development, use relative URLs with Vite proxy.
-const isProd = import.meta.env.PROD;
-const API_BASE = isProd ? 'https://api.remindar.tech' : '';
+// Always hit the backend on the Oracle VM (works for both dev and prod)
+const API_BASE = 'https://api.remindar.tech';
 
 // ---- Auth-aware fetch ----
 
@@ -37,17 +35,9 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
 // ---- WebSocket URL (token as query param) ----
 
 export function getWsUrl(token?: string): string {
-    let url: string;
-    if (isProd) {
-        url = 'wss://api.remindar.tech/ws';
-    } else if (typeof window !== 'undefined') {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        url = `${protocol}//${window.location.host}/ws`;
-    } else {
-        url = 'ws://localhost:8000/ws';
-    }
-    if (token) url += `?token=${encodeURIComponent(token)}`;
-    return url;
+    // Always use deployed backend WebSocket
+    const url = 'wss://api.remindar.tech/ws';
+    return token ? `${url}?token=${encodeURIComponent(token)}` : url;
 }
 
 // ---- API endpoints ----

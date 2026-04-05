@@ -18,6 +18,7 @@ class Person(BaseModel):
     relation: str
     last_met: str
     context: str
+    language: str = 'en'  # ISO 639-1 language code
     face_image: Optional[str] = None  # Base64-encoded face thumbnail from registration
     
     class Config:
@@ -30,6 +31,7 @@ class PersonCreate(BaseModel):
     relation: str
     last_met: str
     context: str
+    language: str = 'en'
 
 
 class FaceData(BaseModel):

@@ -28,6 +28,7 @@ export interface Person {
     last_met: string;
     context: string;
     face_image?: string;  // Base64-encoded face thumbnail from registration
+    language: string;     // ISO 639-1 language code (en, zh, ar, es, etc.)
 }
 
 // Recognition result from backend
