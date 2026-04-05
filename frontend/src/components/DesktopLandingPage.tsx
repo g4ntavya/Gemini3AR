@@ -841,9 +841,375 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
                 </div>
             </section>
 
-            {/* Gemini & Features Section - Moved out of pinned section to prevent overlap */}
+            {/* How It Works Section */}
             <section
-                className="relative w-full py-20 min-h-[100dvh]"
+                className="relative w-full py-24 md:py-32"
+                style={{ backgroundColor: '#F5F0E8' }}
+            >
+                {/* Grid Line Background */}
+                <svg
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    style={{ opacity: 0.08, zIndex: 0 }}
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    <defs>
+                        <pattern id="how-it-works-grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                            <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#272728" strokeWidth="0.5" />
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#how-it-works-grid)" />
+                </svg>
+
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                    {/* Section Header */}
+                    <div className="text-center mb-16 md:mb-24">
+                        <h2
+                            className="text-4xl sm:text-5xl md:text-6xl text-black mb-6"
+                            style={{ fontFamily: 'Moglan_DEMO' }}
+                        >
+                            How It Works
+                        </h2>
+                        <p
+                            className="text-black/80 text-lg md:text-xl max-w-2xl mx-auto"
+                            style={{ fontFamily: 'HelveticaNeue-Light' }}
+                        >
+                            Three simple steps to never forget a face again
+                        </p>
+                    </div>
+
+                    {/* Steps Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6 lg:gap-10 max-w-6xl mx-auto">
+                        {/* Step 1 */}
+                        <div 
+                            className="group relative bg-white/50 backdrop-blur-sm border border-black/10 p-8 md:p-10 hover:bg-white/80 transition-all duration-500 hover:shadow-xl hover:-translate-y-2"
+                            ref={(el) => {
+                                if (el) {
+                                    gsap.set(el, { opacity: 0, y: 40 });
+                                    ScrollTrigger.create({
+                                        trigger: el,
+                                        start: 'top 90%',
+                                        onEnter: () => {
+                                            gsap.to(el, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' });
+                                        }
+                                    });
+                                }
+                            }}
+                        >
+                            <div className="flex items-center gap-4 mb-6">
+                                <span 
+                                    className="text-5xl md:text-6xl text-remindar-button-brown/30 group-hover:text-remindar-button-brown transition-colors duration-300"
+                                    style={{ fontFamily: 'Mileast', fontStyle: 'italic' }}
+                                >
+                                    01
+                                </span>
+                                <div className="w-12 h-[1px] bg-black/20 group-hover:w-20 group-hover:bg-remindar-button-brown transition-all duration-300"></div>
+                            </div>
+                            <h3
+                                className="text-xl md:text-2xl text-black mb-4"
+                                style={{ fontFamily: 'Moglan_DEMO' }}
+                            >
+                                See Someone
+                            </h3>
+                            <p
+                                className="text-black/80 text-base md:text-lg leading-relaxed"
+                                style={{ fontFamily: 'HelveticaNeue-Light' }}
+                            >
+                                Point your camera at anyone. RemindAR instantly detects faces in your field of view using advanced on-device processing.
+                            </p>
+                            {/* Icon */}
+                            <div className="absolute top-6 right-6 opacity-10 group-hover:opacity-30 transition-opacity duration-300">
+                                <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div 
+                            className="group relative bg-white/50 backdrop-blur-sm border border-black/10 p-8 md:p-10 hover:bg-white/80 transition-all duration-500 hover:shadow-xl hover:-translate-y-2"
+                            ref={(el) => {
+                                if (el) {
+                                    gsap.set(el, { opacity: 0, y: 40 });
+                                    ScrollTrigger.create({
+                                        trigger: el,
+                                        start: 'top 90%',
+                                        onEnter: () => {
+                                            gsap.to(el, { opacity: 1, y: 0, duration: 0.6, delay: 0.15, ease: 'power2.out' });
+                                        }
+                                    });
+                                }
+                            }}
+                        >
+                            <div className="flex items-center gap-4 mb-6">
+                                <span 
+                                    className="text-5xl md:text-6xl text-remindar-button-brown/30 group-hover:text-remindar-button-brown transition-colors duration-300"
+                                    style={{ fontFamily: 'Mileast', fontStyle: 'italic' }}
+                                >
+                                    02
+                                </span>
+                                <div className="w-12 h-[1px] bg-black/20 group-hover:w-20 group-hover:bg-remindar-button-brown transition-all duration-300"></div>
+                            </div>
+                            <h3
+                                className="text-xl md:text-2xl text-black mb-4"
+                                style={{ fontFamily: 'Moglan_DEMO' }}
+                            >
+                                Get Context
+                            </h3>
+                            <p
+                                className="text-black/80 text-base md:text-lg leading-relaxed"
+                                style={{ fontFamily: 'HelveticaNeue-Light' }}
+                            >
+                                If recognized, their name, relationship, and your last conversation appear instantly. No searching, no awkward pauses.
+                            </p>
+                            {/* Icon */}
+                            <div className="absolute top-6 right-6 opacity-10 group-hover:opacity-30 transition-opacity duration-300">
+                                <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        {/* Step 3 */}
+                        <div 
+                            className="group relative bg-white/50 backdrop-blur-sm border border-black/10 p-8 md:p-10 hover:bg-white/80 transition-all duration-500 hover:shadow-xl hover:-translate-y-2"
+                            ref={(el) => {
+                                if (el) {
+                                    gsap.set(el, { opacity: 0, y: 40 });
+                                    ScrollTrigger.create({
+                                        trigger: el,
+                                        start: 'top 90%',
+                                        onEnter: () => {
+                                            gsap.to(el, { opacity: 1, y: 0, duration: 0.6, delay: 0.3, ease: 'power2.out' });
+                                        }
+                                    });
+                                }
+                            }}
+                        >
+                            <div className="flex items-center gap-4 mb-6">
+                                <span 
+                                    className="text-5xl md:text-6xl text-remindar-button-brown/30 group-hover:text-remindar-button-brown transition-colors duration-300"
+                                    style={{ fontFamily: 'Mileast', fontStyle: 'italic' }}
+                                >
+                                    03
+                                </span>
+                                <div className="w-12 h-[1px] bg-black/20 group-hover:w-20 group-hover:bg-remindar-button-brown transition-all duration-300"></div>
+                            </div>
+                            <h3
+                                className="text-xl md:text-2xl text-black mb-4"
+                                style={{ fontFamily: 'Moglan_DEMO' }}
+                            >
+                                Build Memory
+                            </h3>
+                            <p
+                                className="text-black/80 text-base md:text-lg leading-relaxed"
+                                style={{ fontFamily: 'HelveticaNeue-Light' }}
+                            >
+                                New face? Just speak naturally. Gemini transcribes and extracts name, relationship, and context automatically.
+                            </p>
+                            {/* Icon */}
+                            <div className="absolute top-6 right-6 opacity-10 group-hover:opacity-30 transition-opacity duration-300">
+                                <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Who It's For Section */}
+            <section
+                className="relative w-full py-24 md:py-32"
+                style={{ backgroundColor: '#F5F0E8' }}
+            >
+                {/* Grid Line Background */}
+                <svg
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    style={{ opacity: 0.06, zIndex: 0 }}
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    <defs>
+                        <pattern id="who-its-for-grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                            <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#272728" strokeWidth="0.5" />
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#who-its-for-grid)" />
+                </svg>
+
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                    {/* Section Header */}
+                    <div className="text-center mb-16 md:mb-20">
+                        <h2
+                            className="text-4xl sm:text-5xl md:text-6xl text-black mb-6"
+                            style={{ fontFamily: 'Moglan_DEMO' }}
+                        >
+                            Who It's For
+                        </h2>
+                        <p
+                            className="text-black/80 text-lg md:text-xl max-w-2xl mx-auto"
+                            style={{ fontFamily: 'HelveticaNeue-Light' }}
+                        >
+                            Designed with empathy for those who need it most
+                        </p>
+                    </div>
+
+                    {/* Use Cases Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 max-w-5xl mx-auto">
+                        {/* Use Case 1 */}
+                        <div 
+                            className="flex gap-6 items-start"
+                            ref={(el) => {
+                                if (el) {
+                                    gsap.set(el, { opacity: 0, x: -30 });
+                                    ScrollTrigger.create({
+                                        trigger: el,
+                                        start: 'top 90%',
+                                        onEnter: () => {
+                                            gsap.to(el, { opacity: 1, x: 0, duration: 0.6, ease: 'power2.out' });
+                                        }
+                                    });
+                                }
+                            }}
+                        >
+                            <div className="flex-shrink-0 w-14 h-14 bg-remindar-button-brown/10 rounded-full flex items-center justify-center">
+                                <svg className="w-7 h-7 text-remindar-button-brown" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3
+                                    className="text-xl md:text-2xl text-black mb-2"
+                                    style={{ fontFamily: 'Moglan_DEMO' }}
+                                >
+                                    Early-Stage Memory Conditions
+                                </h3>
+                                <p
+                                    className="text-black/80 text-base md:text-lg leading-relaxed"
+                                    style={{ fontFamily: 'HelveticaNeue-Light' }}
+                                >
+                                    Gentle support for those experiencing mild cognitive changes, helping maintain independence and confidence in social situations.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Use Case 2 */}
+                        <div 
+                            className="flex gap-6 items-start"
+                            ref={(el) => {
+                                if (el) {
+                                    gsap.set(el, { opacity: 0, x: 30 });
+                                    ScrollTrigger.create({
+                                        trigger: el,
+                                        start: 'top 90%',
+                                        onEnter: () => {
+                                            gsap.to(el, { opacity: 1, x: 0, duration: 0.6, delay: 0.1, ease: 'power2.out' });
+                                        }
+                                    });
+                                }
+                            }}
+                        >
+                            <div className="flex-shrink-0 w-14 h-14 bg-remindar-button-brown/10 rounded-full flex items-center justify-center">
+                                <svg className="w-7 h-7 text-remindar-button-brown" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3
+                                    className="text-xl md:text-2xl text-black mb-2"
+                                    style={{ fontFamily: 'Moglan_DEMO' }}
+                                >
+                                    Face Blindness (Prosopagnosia)
+                                </h3>
+                                <p
+                                    className="text-black/80 text-base md:text-lg leading-relaxed"
+                                    style={{ fontFamily: 'HelveticaNeue-Light' }}
+                                >
+                                    A reliable companion for those who struggle to recognize faces, reducing anxiety in everyday encounters.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Use Case 3 */}
+                        <div 
+                            className="flex gap-6 items-start"
+                            ref={(el) => {
+                                if (el) {
+                                    gsap.set(el, { opacity: 0, x: -30 });
+                                    ScrollTrigger.create({
+                                        trigger: el,
+                                        start: 'top 90%',
+                                        onEnter: () => {
+                                            gsap.to(el, { opacity: 1, x: 0, duration: 0.6, delay: 0.2, ease: 'power2.out' });
+                                        }
+                                    });
+                                }
+                            }}
+                        >
+                            <div className="flex-shrink-0 w-14 h-14 bg-remindar-button-brown/10 rounded-full flex items-center justify-center">
+                                <svg className="w-7 h-7 text-remindar-button-brown" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3
+                                    className="text-xl md:text-2xl text-black mb-2"
+                                    style={{ fontFamily: 'Moglan_DEMO' }}
+                                >
+                                    Busy Professionals
+                                </h3>
+                                <p
+                                    className="text-black/80 text-base md:text-lg leading-relaxed"
+                                    style={{ fontFamily: 'HelveticaNeue-Light' }}
+                                >
+                                    Network effortlessly at conferences and events. Never forget a client, colleague, or important contact again.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Use Case 4 */}
+                        <div 
+                            className="flex gap-6 items-start"
+                            ref={(el) => {
+                                if (el) {
+                                    gsap.set(el, { opacity: 0, x: 30 });
+                                    ScrollTrigger.create({
+                                        trigger: el,
+                                        start: 'top 90%',
+                                        onEnter: () => {
+                                            gsap.to(el, { opacity: 1, x: 0, duration: 0.6, delay: 0.3, ease: 'power2.out' });
+                                        }
+                                    });
+                                }
+                            }}
+                        >
+                            <div className="flex-shrink-0 w-14 h-14 bg-remindar-button-brown/10 rounded-full flex items-center justify-center">
+                                <svg className="w-7 h-7 text-remindar-button-brown" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3
+                                    className="text-xl md:text-2xl text-black mb-2"
+                                    style={{ fontFamily: 'Moglan_DEMO' }}
+                                >
+                                    Caregivers & Families
+                                </h3>
+                                <p
+                                    className="text-black/80 text-base md:text-lg leading-relaxed"
+                                    style={{ fontFamily: 'HelveticaNeue-Light' }}
+                                >
+                                    Peace of mind for families supporting loved ones. Know they have gentle assistance when needed.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Gemini & Features Section */}
+            <section
+                className="relative w-full py-24 md:py-32"
                 style={{ backgroundColor: '#F5F0E8' }}
             >
                 {/* Grid Line Background for continuity */}
@@ -860,11 +1226,11 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
                     <rect width="100%" height="100%" fill="url(#features-grid-3)" />
                 </svg>
 
-                {/* Powered by Gemini Section - Full page */}
+                {/* Powered by Gemini Section */}
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                     <div
                         ref={geminiSectionRef}
-                        className="min-h-[100dvh] flex flex-col justify-center py-20"
+                        className="py-12"
                     >
                         {/* Powered by Gemini Heading */}
                         <div className="flex items-center justify-center gap-4 mb-16">
@@ -888,8 +1254,8 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
                             </h2>
                         </div>
 
-                        {/* Features Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 max-w-4xl mx-auto px-4">
+                        {/* Features Grid - Original Style */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 max-w-4xl mx-auto px-4 mb-32">
                             {/* Feature 1 */}
                             <div ref={geminiFeature1Ref} className="space-y-2 text-center">
                                 <h3
@@ -900,7 +1266,7 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
                                 </h3>
                                 <p
                                     className="text-black text-base md:text-lg"
-                                    style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
+                                    style={{ fontFamily: 'HelveticaNeue-Light' }}
                                 >
                                     Speak naturally in any language.
                                 </p>
@@ -916,7 +1282,7 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
                                 </h3>
                                 <p
                                     className="text-black text-base md:text-lg"
-                                    style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
+                                    style={{ fontFamily: 'HelveticaNeue-Light' }}
                                 >
                                     Auto-fills name, relation, context.
                                 </p>
@@ -932,7 +1298,7 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
                                 </h3>
                                 <p
                                     className="text-black text-base md:text-lg"
-                                    style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
+                                    style={{ fontFamily: 'HelveticaNeue-Light' }}
                                 >
                                     Query your contacts with natural language.
                                 </p>
@@ -940,7 +1306,6 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
 
                             {/* Feature 4 */}
                             <div ref={geminiFeature4Ref} className="space-y-2 text-center">
-
                                 <h3
                                     className="text-xl md:text-2xl text-black font-bold"
                                     style={{ fontFamily: 'Moglan_DEMO' }}
@@ -949,7 +1314,7 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
                                 </h3>
                                 <p
                                     className="text-black text-base md:text-lg"
-                                    style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
+                                    style={{ fontFamily: 'HelveticaNeue-Light' }}
                                 >
                                     Continuous listening with 99% accuracy suitable for long conversations.
                                 </p>
@@ -957,92 +1322,222 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
                         </div>
                     </div>
 
-                    {/* Notable Features List */}
-                    <div className="mb-16 md:mb-20 mt-32 md:mt-48">
-                        <h2
-                            className="text-4xl sm:text-5xl md:text-6xl text-black mb-12 text-center"
-                            style={{ fontFamily: 'Moglan_DEMO' }}
-                        >
-                            Notable Features
-                        </h2>
+                    {/* Notable Features - Completely Redesigned */}
+                    <div className="mb-16 md:mb-20">
+                        <div className="text-center mb-16">
+                            <h2
+                                className="text-4xl sm:text-5xl md:text-6xl text-black mb-6"
+                                style={{ fontFamily: 'Moglan_DEMO' }}
+                            >
+                                Notable Features
+                            </h2>
+                            <p
+                                className="text-black/80 text-lg md:text-xl max-w-2xl mx-auto"
+                                style={{ fontFamily: 'HelveticaNeue-Light' }}
+                            >
+                                See it in action
+                            </p>
+                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 lg:gap-16">
-                            {/* Left Column - Features with Video */}
-                            <div className="space-y-6">
-                                {/* Hover Feature with Video */}
-                                <div className="border-b border-black pb-4">
-                                    <p className="text-black font-helvetica font-bold text-xs sm:text-sm mb-3">
-                                        Interactive Face Labels Hover to reveal info and actions.
-                                    </p>
-                                    <div className="w-4/5 mx-auto">
-                                        <video
-                                            ref={featureVideoRef}
-                                            src="/1768670517690173.mp4"
-                                            autoPlay
-                                            loop
-                                            muted
-                                            playsInline
-                                            className="w-full h-auto rounded-lg"
-                                        />
-                                    </div>
-                                    <p
-                                        className="text-black italic text-[9px] sm:text-xs mt-2 text-center"
-                                        style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
-                                    >
-                                        (Hover animation)
-                                    </p>
+                        {/* Feature Showcase - Two Column with Media */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16 max-w-6xl mx-auto">
+                            {/* Feature 1 - Interactive Face Labels */}
+                            <div 
+                                className="group"
+                                ref={(el) => {
+                                    if (el) {
+                                        gsap.set(el, { opacity: 0, y: 30 });
+                                        ScrollTrigger.create({
+                                            trigger: el,
+                                            start: 'top 85%',
+                                            onEnter: () => {
+                                                gsap.to(el, { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' });
+                                            }
+                                        });
+                                    }
+                                }}
+                            >
+                                <div className="relative overflow-hidden rounded-xl bg-black/5 border border-black/10 mb-6">
+                                    <video
+                                        ref={featureVideoRef}
+                                        src="/1768670517690173.mp4"
+                                        autoPlay
+                                        loop
+                                        muted
+                                        playsInline
+                                        className="w-full h-auto"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
                                 </div>
+                                <h3
+                                    className="text-2xl md:text-3xl text-black mb-3"
+                                    style={{ fontFamily: 'Moglan_DEMO' }}
+                                >
+                                    Interactive Face Labels
+                                </h3>
+                                <p
+                                    className="text-black/80 text-base md:text-lg leading-relaxed"
+                                    style={{ fontFamily: 'HelveticaNeue-Light' }}
+                                >
+                                    Hover over any recognized face to reveal their name, your relationship, and recent conversation context. Quick actions let you edit or record new information instantly.
+                                </p>
                             </div>
 
-                            {/* Right Column - Dashboard with Screenshot */}
-                            <div className="space-y-6">
-                                {/* Dashboard Feature with Screenshot */}
-                                <div className="border-b border-black pb-4">
-                                    <p className="text-black font-helvetica font-bold text-xs sm:text-sm mb-3">
-                                        People Dashboard Swipeable cards with edit/delete.
-                                    </p>
-                                    <div className="w-4/5 mx-auto">
-                                        <img
-                                            src="/screenshot_bottom.png"
-                                            alt="Dashboard view"
-                                            className="w-full h-auto rounded-lg"
-                                        />
-                                    </div>
-                                    <p
-                                        className="text-black italic text-[9px] sm:text-xs mt-2 text-center"
-                                        style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
-                                    >
-                                        (Dashboard view)
-                                    </p>
+                            {/* Feature 2 - People Dashboard */}
+                            <div 
+                                className="group"
+                                ref={(el) => {
+                                    if (el) {
+                                        gsap.set(el, { opacity: 0, y: 30 });
+                                        ScrollTrigger.create({
+                                            trigger: el,
+                                            start: 'top 85%',
+                                            onEnter: () => {
+                                                gsap.to(el, { opacity: 1, y: 0, duration: 0.6, delay: 0.15, ease: 'power2.out' });
+                                            }
+                                        });
+                                    }
+                                }}
+                            >
+                                <div className="relative overflow-hidden rounded-xl bg-black/5 border border-black/10 mb-6">
+                                    <img
+                                        src="/screenshot_bottom.png"
+                                        alt="Dashboard view"
+                                        className="w-full h-auto"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
                                 </div>
+                                <h3
+                                    className="text-2xl md:text-3xl text-black mb-3"
+                                    style={{ fontFamily: 'Moglan_DEMO' }}
+                                >
+                                    People Dashboard
+                                </h3>
+                                <p
+                                    className="text-black/80 text-base md:text-lg leading-relaxed"
+                                    style={{ fontFamily: 'HelveticaNeue-Light' }}
+                                >
+                                    Manage all your contacts in one place with swipeable cards. Edit details, update context, or remove entries with intuitive touch gestures.
+                                </p>
                             </div>
                         </div>
 
-                        {/* Additional Features Row */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 lg:gap-16 mt-8">
-                            <div className="space-y-4">
-                                <div className="border-b border-black pb-3">
-                                    <p className="text-black font-helvetica font-bold text-xs sm:text-sm">
-                                        Cloud Sync Firebase + SQLite hybrid storage.
-                                    </p>
+                        {/* Technical Features Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-5xl mx-auto mt-16">
+                            {/* Tech Feature 1 */}
+                            <div 
+                                className="text-center p-6 bg-white/40 rounded-lg border border-black/5 hover:bg-white/70 transition-all duration-300"
+                                ref={(el) => {
+                                    if (el) {
+                                        gsap.set(el, { opacity: 0, scale: 0.9 });
+                                        ScrollTrigger.create({
+                                            trigger: el,
+                                            start: 'top 90%',
+                                            onEnter: () => {
+                                                gsap.to(el, { opacity: 1, scale: 1, duration: 0.4, ease: 'back.out' });
+                                            }
+                                        });
+                                    }
+                                }}
+                            >
+                                <div className="w-10 h-10 mx-auto mb-3 text-remindar-button-brown">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
                                 </div>
-                                <div className="border-b border-black pb-3">
-                                    <p className="text-black font-helvetica font-bold text-xs sm:text-sm">
-                                        Mobile Ready PWA with fullscreen camera support.
-                                    </p>
-                                </div>
+                                <h4 className="text-sm md:text-base font-bold text-black mb-1" style={{ fontFamily: 'Moglan_DEMO' }}>
+                                    Cloud Sync
+                                </h4>
+                                <p className="text-xs md:text-sm text-black/70" style={{ fontFamily: 'HelveticaNeue-Light' }}>
+                                    Firebase + SQLite hybrid
+                                </p>
                             </div>
-                            <div className="space-y-4">
-                                <div className="border-b border-black pb-3">
-                                    <p className="text-black font-helvetica font-bold text-xs sm:text-sm">
-                                        Real-Time Recognition Instant face detection and matching.
-                                    </p>
+
+                            {/* Tech Feature 2 */}
+                            <div 
+                                className="text-center p-6 bg-white/40 rounded-lg border border-black/5 hover:bg-white/70 transition-all duration-300"
+                                ref={(el) => {
+                                    if (el) {
+                                        gsap.set(el, { opacity: 0, scale: 0.9 });
+                                        ScrollTrigger.create({
+                                            trigger: el,
+                                            start: 'top 90%',
+                                            onEnter: () => {
+                                                gsap.to(el, { opacity: 1, scale: 1, duration: 0.4, delay: 0.1, ease: 'back.out' });
+                                            }
+                                        });
+                                    }
+                                }}
+                            >
+                                <div className="w-10 h-10 mx-auto mb-3 text-remindar-button-brown">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                    </svg>
                                 </div>
-                                <div className="border-b border-black pb-3">
-                                    <p className="text-black font-helvetica font-bold text-xs sm:text-sm">
-                                        Offline Capable Works without internet using local cache.
-                                    </p>
+                                <h4 className="text-sm md:text-base font-bold text-black mb-1" style={{ fontFamily: 'Moglan_DEMO' }}>
+                                    Mobile Ready
+                                </h4>
+                                <p className="text-xs md:text-sm text-black/70" style={{ fontFamily: 'HelveticaNeue-Light' }}>
+                                    PWA with fullscreen camera
+                                </p>
+                            </div>
+
+                            {/* Tech Feature 3 */}
+                            <div 
+                                className="text-center p-6 bg-white/40 rounded-lg border border-black/5 hover:bg-white/70 transition-all duration-300"
+                                ref={(el) => {
+                                    if (el) {
+                                        gsap.set(el, { opacity: 0, scale: 0.9 });
+                                        ScrollTrigger.create({
+                                            trigger: el,
+                                            start: 'top 90%',
+                                            onEnter: () => {
+                                                gsap.to(el, { opacity: 1, scale: 1, duration: 0.4, delay: 0.2, ease: 'back.out' });
+                                            }
+                                        });
+                                    }
+                                }}
+                            >
+                                <div className="w-10 h-10 mx-auto mb-3 text-remindar-button-brown">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
                                 </div>
+                                <h4 className="text-sm md:text-base font-bold text-black mb-1" style={{ fontFamily: 'Moglan_DEMO' }}>
+                                    Real-Time
+                                </h4>
+                                <p className="text-xs md:text-sm text-black/70" style={{ fontFamily: 'HelveticaNeue-Light' }}>
+                                    Instant face detection
+                                </p>
+                            </div>
+
+                            {/* Tech Feature 4 */}
+                            <div 
+                                className="text-center p-6 bg-white/40 rounded-lg border border-black/5 hover:bg-white/70 transition-all duration-300"
+                                ref={(el) => {
+                                    if (el) {
+                                        gsap.set(el, { opacity: 0, scale: 0.9 });
+                                        ScrollTrigger.create({
+                                            trigger: el,
+                                            start: 'top 90%',
+                                            onEnter: () => {
+                                                gsap.to(el, { opacity: 1, scale: 1, duration: 0.4, delay: 0.3, ease: 'back.out' });
+                                            }
+                                        });
+                                    }
+                                }}
+                            >
+                                <div className="w-10 h-10 mx-auto mb-3 text-remindar-button-brown">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                                    </svg>
+                                </div>
+                                <h4 className="text-sm md:text-base font-bold text-black mb-1" style={{ fontFamily: 'Moglan_DEMO' }}>
+                                    Multi-Language
+                                </h4>
+                                <p className="text-xs md:text-sm text-black/70" style={{ fontFamily: 'HelveticaNeue-Light' }}>
+                                    Inclusive for people worldwide
+                                </p>
                             </div>
                         </div>
                     </div>

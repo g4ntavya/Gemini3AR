@@ -21,25 +21,40 @@ export function RegionSelector({ currentRegion, regions, onSelect }: RegionSelec
     const dropdownRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
-    // Calculate dropdown position when opened
+    // Calculate dropdown position when opened and on scroll/resize
     useEffect(() => {
-        if (isOpen && buttonRef.current) {
-            const rect = buttonRef.current.getBoundingClientRect();
-            const isMobile = window.innerWidth < 640;
-            
-            if (isMobile) {
-                // Center on mobile
-                setDropdownPosition({
-                    top: rect.bottom + 8,
-                    left: window.innerWidth / 2
-                });
-            } else {
-                // Align to right edge on desktop
-                setDropdownPosition({
-                    top: rect.bottom + 8,
-                    left: rect.right
-                });
+        const updatePosition = () => {
+            if (isOpen && buttonRef.current) {
+                const rect = buttonRef.current.getBoundingClientRect();
+                const isMobile = window.innerWidth < 640;
+                
+                if (isMobile) {
+                    // Center on mobile
+                    setDropdownPosition({
+                        top: rect.bottom + 8,
+                        left: window.innerWidth / 2
+                    });
+                } else {
+                    // Align to right edge on desktop
+                    setDropdownPosition({
+                        top: rect.bottom + 8,
+                        left: rect.right
+                    });
+                }
             }
+        };
+
+        // Update position initially and on scroll/resize
+        updatePosition();
+        
+        if (isOpen) {
+            window.addEventListener('scroll', updatePosition, true);
+            window.addEventListener('resize', updatePosition);
+            
+            return () => {
+                window.removeEventListener('scroll', updatePosition, true);
+                window.removeEventListener('resize', updatePosition);
+            };
         }
     }, [isOpen]);
 
