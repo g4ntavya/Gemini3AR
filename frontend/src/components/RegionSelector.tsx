@@ -1,9 +1,10 @@
 /**
  * RegionSelector - Dropdown component for selecting user's region
- * Styled to match the sign-in/logout buttons on the landing page
+ * Uses React Portal to render dropdown above all page content
  */
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Region } from '../data/regions';
 
 interface RegionSelectorProps {
@@ -15,13 +16,41 @@ interface RegionSelectorProps {
 export function RegionSelector({ currentRegion, regions, onSelect }: RegionSelectorProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+    const buttonRef = useRef<HTMLButtonElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // Calculate dropdown position when opened
+    useEffect(() => {
+        if (isOpen && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            const isMobile = window.innerWidth < 640;
+            
+            if (isMobile) {
+                // Center on mobile
+                setDropdownPosition({
+                    top: rect.bottom + 8,
+                    left: window.innerWidth / 2
+                });
+            } else {
+                // Align to right edge on desktop
+                setDropdownPosition({
+                    top: rect.bottom + 8,
+                    left: rect.right
+                });
+            }
+        }
+    }, [isOpen]);
 
     // Close dropdown when clicking outside
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            if (
+                dropdownRef.current && !dropdownRef.current.contains(target) &&
+                buttonRef.current && !buttonRef.current.contains(target)
+            ) {
                 setIsOpen(false);
                 setSearchQuery('');
             }
@@ -51,16 +80,20 @@ export function RegionSelector({ currentRegion, regions, onSelect }: RegionSelec
 
     const toggleDropdown = (e: React.MouseEvent | React.TouchEvent) => {
         e.preventDefault();
+        e.stopPropagation();
         setIsOpen(!isOpen);
     };
 
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+
     return (
-        <div ref={dropdownRef} className="relative z-[9999]">
-            {/* Region Button - matches auth button style */}
+        <>
+            {/* Region Button */}
             <button
+                ref={buttonRef}
                 onClick={toggleDropdown}
                 onTouchEnd={toggleDropdown}
-                className="text-[10px] sm:text-sm md:text-base px-3 py-2 md:px-4 md:py-3 border border-black/20 text-black/60 hover:bg-remindar-button-brown hover:text-remindar-button-text hover:border-remindar-button-brown transition-all duration-300 relative z-[9999] cursor-pointer flex items-center gap-1.5 md:gap-2"
+                className="text-[10px] sm:text-sm md:text-base px-3 py-2 md:px-4 md:py-3 border border-black/20 text-black/60 hover:bg-remindar-button-brown hover:text-remindar-button-text hover:border-remindar-button-brown transition-all duration-300 cursor-pointer flex items-center gap-1.5 md:gap-2"
                 style={{ fontFamily: 'Mileast', fontStyle: 'italic' }}
                 title="Select your region for voice optimization"
             >
@@ -81,22 +114,24 @@ export function RegionSelector({ currentRegion, regions, onSelect }: RegionSelec
                 </svg>
             </button>
 
-            {/* Dropdown Menu */}
-            {isOpen && (
+            {/* Dropdown Menu - Rendered via Portal */}
+            {isOpen && createPortal(
                 <div 
-                    className="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-0 mt-2 w-[260px] sm:w-72 rounded-lg shadow-2xl border border-black/20 overflow-hidden"
+                    ref={dropdownRef}
+                    className="fixed w-[260px] sm:w-72 rounded-lg shadow-2xl border border-black/20 overflow-hidden"
                     style={{ 
+                        top: dropdownPosition.top,
+                        left: isMobile ? dropdownPosition.left : dropdownPosition.left,
+                        transform: isMobile ? 'translateX(-50%)' : 'translateX(-100%)',
                         maxHeight: '280px',
                         backgroundColor: '#ffffff',
-                        zIndex: 9999
+                        zIndex: 99999
                     }}
                 >
                     {/* Search Input */}
                     <div 
                         className="sticky top-0 p-2 border-b border-black/10"
-                        style={{ 
-                            backgroundColor: '#ffffff'
-                        }}
+                        style={{ backgroundColor: '#ffffff' }}
                     >
                         <input
                             ref={searchInputRef}
@@ -136,7 +171,7 @@ export function RegionSelector({ currentRegion, regions, onSelect }: RegionSelec
                                     className={`w-full px-3 py-2 sm:px-4 sm:py-2.5 flex items-center gap-2.5 hover:bg-remindar-button-brown/20 transition-colors duration-150 text-left ${
                                         currentRegion?.code === region.code ? 'bg-remindar-button-brown/10' : ''
                                     }`}
-                                    style={{ backgroundColor: currentRegion?.code === region.code ? 'rgba(159, 142, 110, 0.1)' : 'transparent' }}
+                                    style={{ backgroundColor: currentRegion?.code === region.code ? 'rgba(159, 142, 110, 0.1)' : '#ffffff' }}
                                 >
                                     <span className="text-lg sm:text-xl leading-none flex-shrink-0">
                                         {region.flag}
@@ -176,8 +211,9 @@ export function RegionSelector({ currentRegion, regions, onSelect }: RegionSelec
                     >
                         Optimizes voice recognition for your region
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
-        </div>
+        </>
     );
 }
