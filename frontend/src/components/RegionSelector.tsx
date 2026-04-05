@@ -84,11 +84,23 @@ export function RegionSelector({ currentRegion, regions, onSelect }: RegionSelec
             {/* Dropdown Menu */}
             {isOpen && (
                 <div 
-                    className="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-0 mt-2 w-[280px] sm:w-72 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-black/10 overflow-hidden"
-                    style={{ maxHeight: '320px' }}
+                    className="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-0 mt-2 w-[280px] sm:w-72 rounded-lg shadow-xl border border-black/10 overflow-hidden"
+                    style={{ 
+                        maxHeight: '320px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)'
+                    }}
                 >
                     {/* Search Input */}
-                    <div className="sticky top-0 bg-white/95 backdrop-blur-sm p-2 border-b border-black/10">
+                    <div 
+                        className="sticky top-0 p-2 border-b border-black/10"
+                        style={{ 
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            backdropFilter: 'blur(12px)',
+                            WebkitBackdropFilter: 'blur(12px)'
+                        }}
+                    >
                         <input
                             ref={searchInputRef}
                             type="text"
@@ -96,14 +108,21 @@ export function RegionSelector({ currentRegion, regions, onSelect }: RegionSelec
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full px-3 py-2 text-sm border border-black/20 rounded-md focus:outline-none focus:border-remindar-button-brown"
-                            style={{ fontFamily: 'HelveticaNeue-Light' }}
+                            style={{ 
+                                fontFamily: 'HelveticaNeue-Light',
+                                backgroundColor: '#ffffff',
+                                color: '#000000'
+                            }}
                         />
                     </div>
 
                     {/* Region List */}
                     <div 
                         className="overflow-y-auto"
-                        style={{ maxHeight: '260px' }}
+                        style={{ 
+                            maxHeight: '260px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)'
+                        }}
                     >
                         {filteredRegions.length === 0 ? (
                             <div 
@@ -151,8 +170,13 @@ export function RegionSelector({ currentRegion, regions, onSelect }: RegionSelec
 
                     {/* Footer hint */}
                     <div 
-                        className="sticky bottom-0 bg-white/95 backdrop-blur-sm px-3 py-2 border-t border-black/10 text-xs text-black/40 text-center"
-                        style={{ fontFamily: 'HelveticaNeue-UltraLight' }}
+                        className="sticky bottom-0 px-3 py-2 border-t border-black/10 text-xs text-black/40 text-center"
+                        style={{ 
+                            fontFamily: 'HelveticaNeue-UltraLight',
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            backdropFilter: 'blur(12px)',
+                            WebkitBackdropFilter: 'blur(12px)'
+                        }}
                     >
                         Optimizes voice recognition for your region
                     </div>
