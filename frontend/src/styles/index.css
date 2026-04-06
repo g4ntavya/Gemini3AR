@@ -2575,74 +2575,50 @@ html {
   opacity: 0.5;
 }
 
-.history-group {
-  margin-bottom: 20px;
-}
-
-.history-date {
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.5);
-  margin-bottom: 10px;
+/* History List - Simple chronological log */
+.history-list {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.history-date-icon {
-  font-size: 12px;
-}
-
-.history-entry {
+.history-item {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 10px;
   padding: 12px 14px;
-  margin-bottom: 8px;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.history-entry:last-child {
-  margin-bottom: 0;
+.history-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
-.history-field {
+.history-item-field {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: rgba(255, 255, 255, 0.5);
-  margin-bottom: 6px;
 }
 
-.history-change {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.history-old {
-  color: rgba(255, 255, 255, 0.4);
-  text-decoration: line-through;
-  word-break: break-word;
-}
-
-.history-arrow {
-  color: rgba(255, 255, 255, 0.3);
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.history-new {
-  color: rgba(255, 255, 255, 0.9);
-  word-break: break-word;
-}
-
-.history-time {
+.history-item-datetime {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.3);
-  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.history-item-value {
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+  word-break: break-word;
+}
+
+.history-item-empty {
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
 }
 
 /* Loading state */
