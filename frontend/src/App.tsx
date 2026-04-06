@@ -13,10 +13,12 @@ import { DashboardSidebar } from './components/DashboardSidebar';
 import { AskGeminiButton, GeminiResponse } from './components/AskGeminiButton';
 import { GeminiResponseOverlay } from './components/GeminiResponseOverlay';
 import { OnboardingModal } from './components/OnboardingModal';
+import { PendingPersonNotification, PendingPerson } from './components/PendingPersonNotification';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useFaceDetection } from './hooks/useFaceDetection';
 import { useAuth } from './hooks/useAuth';
 import { useUserRegion } from './hooks/useUserRegion';
+import { usePendingPeople } from './hooks/usePendingPeople';
 import { cropFaceFromVideo } from './utils/faceUtils';
 import { Person, TrackedFace } from './types';
 import { API, authFetch, setTokenGetter, setRegionGetter } from './config/api';
@@ -66,6 +68,9 @@ function App() {
     // Onboarding state
     const [showOnboarding, setShowOnboarding] = useState(false);
 
+    // TEST: Fake notification for testing (remove later)
+    const [testNotification, setTestNotification] = useState<PendingPerson | null>(null);
+
     // Refs
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -85,6 +90,30 @@ function App() {
         getToken: getIdToken,
     });
     const { faces, isModelLoaded, error: detectionError } = useFaceDetection(videoRef);
+
+    // Helper to get face image for a track ID
+    const getFaceImageForTrack = useCallback((trackId: string): string | null => {
+        const face = facesRef.current.get(trackId);
+        if (face && videoRef.current) {
+            return cropFaceFromVideo(videoRef.current, face.bbox);
+        }
+        return null;
+    }, []);
+
+    // Pending people tracking (3-minute unknown face detection)
+    const {
+        currentNotification,
+        pendingQueue,
+        handleYes: handlePendingYes,
+        handleNo: handlePendingNo,
+        handleLater: handlePendingLater,
+        removeFromQueue: removePendingFromQueue,
+    } = usePendingPeople({
+        faces,
+        results,
+        getFaceImage: getFaceImageForTrack,
+        enabled: isDemoActive && cameraReady,
+    });
 
     // Keep facesRef in sync — avoids putting `faces` in effect/callback deps
     // (must come after useFaceDetection which declares `faces`)
@@ -270,6 +299,26 @@ function App() {
         localStorage.setItem(ONBOARDING_KEY, 'true');
         setShowOnboarding(false);
     }, []);
+
+    // Handle pending person notification - Yes (open registration)
+    const handlePendingPersonYes = useCallback((person: PendingPerson) => {
+        handlePendingYes(person);
+        // Open registration modal with the face image
+        setModalTrackId(person.trackId);
+        setModalFaceImage(person.faceImage);
+        setEditingPerson(null);
+        setShowModal(true);
+    }, [handlePendingYes]);
+
+    // Handle pending person from queue - add them
+    const handleAddPendingPerson = useCallback((person: PendingPerson) => {
+        removePendingFromQueue(person.trackId);
+        // Open registration modal with the saved face image
+        setModalTrackId(person.trackId);
+        setModalFaceImage(person.faceImage);
+        setEditingPerson(null);
+        setShowModal(true);
+    }, [removePendingFromQueue]);
 
     // Ensure video is playing (browser may pause it during dialogs)
     const resumeVideoPlayback = useCallback(() => {
@@ -502,6 +551,9 @@ function App() {
                     setSidebarOpen(false);
                     resumeVideoPlayback();
                 }}
+                pendingQueue={pendingQueue}
+                onAddPendingPerson={handleAddPendingPerson}
+                onRemovePendingPerson={removePendingFromQueue}
             />
 
             {/* Gemini Response Overlay */}
@@ -535,6 +587,43 @@ function App() {
                 isOpen={showOnboarding}
                 onComplete={handleOnboardingComplete}
             />
+
+            {/* Pending Person Notification - macOS-style slide-in from right */}
+            <PendingPersonNotification
+                person={testNotification || currentNotification}
+                onYes={(p) => { setTestNotification(null); handlePendingPersonYes(p); }}
+                onNo={(p) => { setTestNotification(null); handlePendingNo(p); }}
+                onLater={(p) => { setTestNotification(null); handlePendingLater(p); }}
+            />
+
+            {/* TEST BUTTON - Remove later */}
+            <button
+                style={{
+                    position: 'fixed',
+                    bottom: 20,
+                    right: 20,
+                    zIndex: 9999,
+                    padding: '8px 16px',
+                    background: '#ff6b6b',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    fontWeight: 600,
+                }}
+                onClick={() => {
+                    setTestNotification({
+                        trackId: 'test-' + Date.now(),
+                        faceImage: '',
+                        firstSeen: Date.now() - 3 * 60 * 1000,
+                        duration: 180,
+                        expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+                    });
+                }}
+            >
+                Test Notif
+            </button>
         </div>
     );
 }

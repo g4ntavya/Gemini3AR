@@ -1,9 +1,11 @@
 /**
  * Dashboard Sidebar - Shows all registered people with swipe actions
+ * Also displays pending people queue (unknown faces saved for later)
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { Person } from '../types';
+import { PendingPerson } from './PendingPersonNotification';
 import { API, authFetch } from '../config/api';
 import { SwipeableCard } from './SwipeableCard';
 import { PersonDetailModal } from './PersonDetailModal';
@@ -11,9 +13,12 @@ import { PersonDetailModal } from './PersonDetailModal';
 interface DashboardSidebarProps {
     isOpen: boolean;
     onClose: () => void;
+    pendingQueue?: PendingPerson[];
+    onAddPendingPerson?: (person: PendingPerson) => void;
+    onRemovePendingPerson?: (trackId: string) => void;
 }
 
-export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
+export function DashboardSidebar({ isOpen, onClose, pendingQueue = [], onAddPendingPerson, onRemovePendingPerson }: DashboardSidebarProps) {
     const [people, setPeople] = useState<Person[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -129,6 +134,21 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
         }).catch(err => console.error('[Dashboard] Delete failed:', err));
     }, []);
 
+    // Format remaining time for pending person expiry
+    const formatTimeRemaining = useCallback((expiresAt: number): string => {
+        const remaining = expiresAt - Date.now();
+        if (remaining <= 0) return 'Expired';
+        
+        const minutes = Math.floor(remaining / 60000);
+        const hours = Math.floor(minutes / 60);
+        
+        if (hours > 0) {
+            const remainingMins = minutes % 60;
+            return `${hours}h ${remainingMins}m left`;
+        }
+        return `${minutes}m left`;
+    }, []);
+
     if (!isOpen && !isClosing) return null;
 
     return (
@@ -158,6 +178,45 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
+
+                {/* Pending People Queue */}
+                {pendingQueue.length > 0 && (
+                    <div className="pending-queue-section">
+                        <div className="pending-queue-header">
+                            <span className="pending-queue-title">Saved for Later</span>
+                            <span className="pending-queue-count">{pendingQueue.length}</span>
+                        </div>
+                        <div className="pending-queue-list">
+                            {pendingQueue.map((person) => (
+                                <div key={person.trackId} className="pending-queue-item">
+                                    <div className="pending-queue-avatar">
+                                        <img src={person.faceImage} alt="Unknown face" />
+                                    </div>
+                                    <div className="pending-queue-info">
+                                        <span className="pending-queue-label">Unknown Person</span>
+                                        <span className="pending-queue-expiry">{formatTimeRemaining(person.expiresAt)}</span>
+                                    </div>
+                                    <div className="pending-queue-actions">
+                                        <button 
+                                            className="pending-add-btn"
+                                            onClick={() => onAddPendingPerson?.(person)}
+                                            title="Add this person"
+                                        >
+                                            Add
+                                        </button>
+                                        <button 
+                                            className="pending-dismiss-btn"
+                                            onClick={() => onRemovePendingPerson?.(person.trackId)}
+                                            title="Dismiss"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* People List */}
                 <div className="sidebar-content">
