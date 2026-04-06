@@ -960,7 +960,7 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
                                 className="text-black/80 text-base md:text-lg leading-relaxed"
                                 style={{ fontFamily: 'HelveticaNeue-Light' }}
                             >
-                                If recognized, their name, relationship, and your last conversation appear instantly. No searching, no awkward pauses.
+                                If recognized, their name, relationship, and your last conversation appear instantly.
                             </p>
                             {/* Icon */}
                             <div className="absolute top-6 right-6 opacity-10 group-hover:opacity-30 transition-opacity duration-300">
@@ -1005,7 +1005,7 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
                                 className="text-black/80 text-base md:text-lg leading-relaxed"
                                 style={{ fontFamily: 'HelveticaNeue-Light' }}
                             >
-                                New face? Just speak naturally. Gemini transcribes and extracts name, relationship, and context automatically.
+                                New face? Just speak in your language. Gemini transcribes and extracts name, relationship, and context automatically. RemindAR is inclusive for all 🤍.
                             </p>
                             {/* Icon */}
                             <div className="absolute top-6 right-6 opacity-10 group-hover:opacity-30 transition-opacity duration-300">
