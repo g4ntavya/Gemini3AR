@@ -2879,25 +2879,42 @@ html {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 0;
+  padding: 12px 12px;
   margin-bottom: 8px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  outline: none;
+}
+
+.pending-queue-header:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pending-queue-header:focus {
+  outline: none;
 }
 
 .pending-queue-title {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.3px;
+  color: rgba(255, 255, 255, 0.9);
 }
 
-.pending-queue-count {
-  font-size: 11px;
+.pending-queue-chevron {
+  font-size: 18px;
   font-weight: 600;
-  color: #64B5F6;
-  background: rgba(100, 181, 246, 0.15);
-  padding: 2px 8px;
-  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  transform: rotate(0deg);
+  transition: transform 0.2s ease;
+}
+
+.pending-queue-chevron.expanded {
+  transform: rotate(90deg);
 }
 
 .pending-queue-list {
@@ -2956,16 +2973,19 @@ html {
   flex-shrink: 0;
 }
 
-.pending-add-btn {
+.pending-queue-btn {
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 500;
-  color: #4CAF50;
-  background: rgba(76, 175, 80, 0.15);
-  border: 1px solid rgba(76, 175, 80, 0.3);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+.pending-add-btn {
+  color: #4CAF50;
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.3);
 }
 
 .pending-add-btn:hover {
@@ -2973,22 +2993,13 @@ html {
   border-color: rgba(76, 175, 80, 0.5);
 }
 
-.pending-dismiss-btn {
-  width: 28px;
-  height: 28px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
+.pending-remove-btn {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
-.pending-dismiss-btn:hover {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
+.pending-remove-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
 }

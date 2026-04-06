@@ -68,9 +68,6 @@ function App() {
     // Onboarding state
     const [showOnboarding, setShowOnboarding] = useState(false);
 
-    // TEST: Fake notification for testing (remove later)
-    const [testNotification, setTestNotification] = useState<PendingPerson | null>(null);
-
     // Refs
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -590,40 +587,11 @@ function App() {
 
             {/* Pending Person Notification - macOS-style slide-in from right */}
             <PendingPersonNotification
-                person={testNotification || currentNotification}
-                onYes={(p) => { setTestNotification(null); handlePendingPersonYes(p); }}
-                onNo={(p) => { setTestNotification(null); handlePendingNo(p); }}
-                onLater={(p) => { setTestNotification(null); handlePendingLater(p); }}
+                person={currentNotification}
+                onYes={handlePendingPersonYes}
+                onNo={handlePendingNo}
+                onLater={handlePendingLater}
             />
-
-            {/* TEST BUTTON - Remove later */}
-            <button
-                style={{
-                    position: 'fixed',
-                    bottom: 20,
-                    right: 20,
-                    zIndex: 9999,
-                    padding: '8px 16px',
-                    background: '#ff6b6b',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 12,
-                    fontWeight: 600,
-                }}
-                onClick={() => {
-                    setTestNotification({
-                        trackId: 'test-' + Date.now(),
-                        faceImage: '',
-                        firstSeen: Date.now() - 3 * 60 * 1000,
-                        duration: 180,
-                        expiresAt: Date.now() + 2 * 60 * 60 * 1000,
-                    });
-                }}
-            >
-                Test Notif
-            </button>
         </div>
     );
 }

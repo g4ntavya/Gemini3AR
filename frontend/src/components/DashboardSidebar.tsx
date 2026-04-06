@@ -24,6 +24,7 @@ export function DashboardSidebar({ isOpen, onClose, pendingQueue = [], onAddPend
     const [searchQuery, setSearchQuery] = useState('');
     const [isClosing, setIsClosing] = useState(false);
     const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+    const [isQueueExpanded, setIsQueueExpanded] = useState(true);
 
     // Fetch people when sidebar opens
     useEffect(() => {
@@ -182,39 +183,44 @@ export function DashboardSidebar({ isOpen, onClose, pendingQueue = [], onAddPend
                 {/* Pending People Queue */}
                 {pendingQueue.length > 0 && (
                     <div className="pending-queue-section">
-                        <div className="pending-queue-header">
-                            <span className="pending-queue-title">Saved for Later</span>
-                            <span className="pending-queue-count">{pendingQueue.length}</span>
-                        </div>
-                        <div className="pending-queue-list">
-                            {pendingQueue.map((person) => (
-                                <div key={person.trackId} className="pending-queue-item">
-                                    <div className="pending-queue-avatar">
-                                        <img src={person.faceImage} alt="Unknown face" />
+                        <button 
+                            className="pending-queue-header"
+                            onClick={() => setIsQueueExpanded(!isQueueExpanded)}
+                        >
+                            <span className="pending-queue-title">Queue ({pendingQueue.length})</span>
+                            <span className={`pending-queue-chevron ${isQueueExpanded ? 'expanded' : ''}`}>›</span>
+                        </button>
+                        {isQueueExpanded && (
+                            <div className="pending-queue-list">
+                                {pendingQueue.map((person) => (
+                                    <div key={person.trackId} className="pending-queue-item">
+                                        <div className="pending-queue-avatar">
+                                            <img src={person.faceImage} alt="Unknown face" />
+                                        </div>
+                                        <div className="pending-queue-info">
+                                            <span className="pending-queue-label">Unknown Person</span>
+                                            <span className="pending-queue-expiry">{formatTimeRemaining(person.expiresAt)}</span>
+                                        </div>
+                                        <div className="pending-queue-actions">
+                                            <button 
+                                                className="pending-queue-btn pending-add-btn"
+                                                onClick={() => onAddPendingPerson?.(person)}
+                                                title="Add this person"
+                                            >
+                                                Add
+                                            </button>
+                                            <button 
+                                                className="pending-queue-btn pending-remove-btn"
+                                                onClick={() => onRemovePendingPerson?.(person.trackId)}
+                                                title="Remove from queue"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="pending-queue-info">
-                                        <span className="pending-queue-label">Unknown Person</span>
-                                        <span className="pending-queue-expiry">{formatTimeRemaining(person.expiresAt)}</span>
-                                    </div>
-                                    <div className="pending-queue-actions">
-                                        <button 
-                                            className="pending-add-btn"
-                                            onClick={() => onAddPendingPerson?.(person)}
-                                            title="Add this person"
-                                        >
-                                            Add
-                                        </button>
-                                        <button 
-                                            className="pending-dismiss-btn"
-                                            onClick={() => onRemovePendingPerson?.(person.trackId)}
-                                            title="Dismiss"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
