@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Person } from '../types';
 import { API, authFetch } from '../config/api';
 import { SwipeableCard } from './SwipeableCard';
+import { PersonDetailModal } from './PersonDetailModal';
 
 interface DashboardSidebarProps {
     isOpen: boolean;
@@ -17,6 +18,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [isClosing, setIsClosing] = useState(false);
+    const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
 
     // Fetch people when sidebar opens
     useEffect(() => {
@@ -70,6 +72,16 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
         window.speechSynthesis.speak(utterance);
+    }, []);
+
+    // Open person detail modal
+    const handlePersonClick = useCallback((person: Person) => {
+        setSelectedPerson(person);
+    }, []);
+
+    // Close person detail modal
+    const handleDetailClose = useCallback(() => {
+        setSelectedPerson(null);
     }, []);
 
     // Edit person
@@ -164,6 +176,7 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
                                     onEdit={handleEdit}
                                     onDelete={handleDelete}
                                     onSpeak={speakPerson}
+                                    onClick={handlePersonClick}
                                 />
                             ))}
                         </div>
@@ -175,6 +188,13 @@ export function DashboardSidebar({ isOpen, onClose }: DashboardSidebarProps) {
                     {people.length} {people.length === 1 ? 'person' : 'people'} registered
                 </div>
             </div>
+
+            {/* Person Detail Modal */}
+            <PersonDetailModal
+                person={selectedPerson}
+                isOpen={selectedPerson !== null}
+                onClose={handleDetailClose}
+            />
         </>
     );
 }

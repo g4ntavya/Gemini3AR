@@ -16,16 +16,18 @@ interface SwipeableCardProps {
     onEdit: (person: Person) => void;
     onDelete: (person: Person) => void;
     onSpeak: (person: Person) => void;
+    onClick?: (person: Person) => void;
 }
 
 // Layout: [Card] 8px [Edit 60px] 8px [Delete 60px] = 136px total
 const ACTION_WIDTH = 136;
 const SNAP_THRESHOLD = 0.25;
 
-export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCardProps) {
+export function SwipeableCard({ person, onEdit, onDelete, onSpeak, onClick }: SwipeableCardProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
     const isDraggingRef = useRef(false);
+    const hasDraggedRef = useRef(false);  // Track if user has dragged during this interaction
     const offsetRef = useRef(0);
     const startXRef = useRef(0);
     const startOffsetRef = useRef(0);
@@ -85,6 +87,7 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
     const startDrag = useCallback((clientX: number) => {
         if (isAnimating) return;
         isDraggingRef.current = true;
+        hasDraggedRef.current = false;  // Reset drag tracking
         startXRef.current = clientX;
         startOffsetRef.current = offsetRef.current;
     }, [isAnimating]);
@@ -93,6 +96,10 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
     const updateDrag = useCallback((clientX: number) => {
         if (!isDraggingRef.current) return;
         const diff = startXRef.current - clientX;
+        // Mark as dragged if moved more than 5px
+        if (Math.abs(diff) > 5) {
+            hasDraggedRef.current = true;
+        }
         updateVisuals(startOffsetRef.current + diff, false);
     }, [updateVisuals]);
 
@@ -186,6 +193,15 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
         setTimeout(() => onDelete(p), 300);
     };
 
+    // Handle card click - only trigger if not dragging/swiping
+    const handleCardClick = useCallback(() => {
+        if (isOpen) {
+            closeActions();
+        } else if (!hasDraggedRef.current && onClick) {
+            onClick(person);
+        }
+    }, [isOpen, closeActions, onClick, person]);
+
     return (
         <div ref={containerRef} className="swipeable-card-container">
             {/* Action buttons - fixed position, card reveals them by sliding */}
@@ -222,7 +238,7 @@ export function SwipeableCard({ person, onEdit, onDelete, onSpeak }: SwipeableCa
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 onMouseDown={handleMouseDown}
-                onClick={isOpen ? closeActions : undefined}
+                onClick={handleCardClick}
             >
                 {/* Face thumbnail */}
                 <div className="person-avatar">

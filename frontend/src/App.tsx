@@ -12,6 +12,7 @@ import { RegistrationModal, RegistrationData } from './components/RegistrationMo
 import { DashboardSidebar } from './components/DashboardSidebar';
 import { AskGeminiButton, GeminiResponse } from './components/AskGeminiButton';
 import { GeminiResponseOverlay } from './components/GeminiResponseOverlay';
+import { OnboardingModal } from './components/OnboardingModal';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useFaceDetection } from './hooks/useFaceDetection';
 import { useAuth } from './hooks/useAuth';
@@ -24,6 +25,9 @@ import { killAllStreams } from './utils/mediaStreamTracker';
 // Recognition settings
 const RECOGNITION_INTERVAL = 500; // 2 recognitions/sec is plenty
 const BURST_DELAY = 50; // For burst recognition after visibility change
+
+// LocalStorage key for onboarding completion
+const ONBOARDING_KEY = 'remindar_onboarding_completed';
 
 function App() {
     const [isDemoActive, setIsDemoActive] = useState(false);
@@ -58,6 +62,9 @@ function App() {
 
     // Gemini response state
     const [geminiResponse, setGeminiResponse] = useState<GeminiResponse | null>(null);
+
+    // Onboarding state
+    const [showOnboarding, setShowOnboarding] = useState(false);
 
     // Refs
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -248,10 +255,20 @@ function App() {
                 height: containerRef.current.clientHeight,
             });
         }
+        // Show onboarding if first time
+        if (!localStorage.getItem(ONBOARDING_KEY)) {
+            setShowOnboarding(true);
+        }
     }, []);
 
     const handleCameraError = useCallback((error: string) => {
         setCameraError(error);
+    }, []);
+
+    // Handle onboarding completion
+    const handleOnboardingComplete = useCallback(() => {
+        localStorage.setItem(ONBOARDING_KEY, 'true');
+        setShowOnboarding(false);
     }, []);
 
     // Ensure video is playing (browser may pause it during dialogs)
@@ -511,6 +528,12 @@ function App() {
                     resumeVideoPlayback();
                 }}
                 onSubmit={handleModalSubmit}
+            />
+
+            {/* Onboarding Modal - shows on first camera ready */}
+            <OnboardingModal
+                isOpen={showOnboarding}
+                onComplete={handleOnboardingComplete}
             />
         </div>
     );

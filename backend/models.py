@@ -34,6 +34,22 @@ class PersonCreate(BaseModel):
     language: str = 'en'
 
 
+class PersonHistoryEntry(BaseModel):
+    """
+    Represents a single change to a person's profile.
+    Tracks what field changed, old and new values, and when.
+    """
+    id: str
+    person_id: str
+    field_changed: str  # 'name', 'relation', 'context', 'last_met'
+    old_value: Optional[str] = None
+    new_value: str
+    changed_at: str  # ISO timestamp string
+    
+    class Config:
+        from_attributes = True
+
+
 class FaceData(BaseModel):
     """
     Incoming face crop data from frontend.

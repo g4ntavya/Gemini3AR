@@ -78,6 +78,24 @@ def init_database():
         CREATE INDEX IF NOT EXISTS idx_people_user_id ON people(user_id)
     """)
     
+    # History table for tracking changes
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS person_history (
+            id TEXT PRIMARY KEY,
+            person_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            field_changed TEXT NOT NULL,
+            old_value TEXT,
+            new_value TEXT NOT NULL,
+            changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (person_id) REFERENCES people(id)
+        )
+    """)
+    
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_history_person_id ON person_history(person_id)
+    """)
+    
     conn.commit()
     print(f"[DB] Database initialized at {DB_PATH}")
 
@@ -381,6 +399,84 @@ def sync_from_firestore(firestore_people: list):
         conn.rollback()
         print(f"[DB] Firestore sync failed, rolled back: {e}")
         raise
+
+
+# ============================================
+# History Functions
+# ============================================
+
+def add_history_entry(
+    person_id: str,
+    user_id: str,
+    field_changed: str,
+    old_value: str,
+    new_value: str
+) -> str:
+    """
+    Add a history entry for a person field change.
+    Returns the history entry ID.
+    """
+    import uuid
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    entry_id = str(uuid.uuid4())
+    
+    cursor.execute("""
+        INSERT INTO person_history (id, person_id, user_id, field_changed, old_value, new_value)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (entry_id, person_id, user_id, field_changed, old_value, new_value))
+    
+    conn.commit()
+    print(f"[DB] Added history entry for {person_id}: {field_changed}")
+    return entry_id
+
+
+def get_person_history(person_id: str) -> List[dict]:
+    """
+    Get all history entries for a person, ordered by most recent first.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT id, person_id, user_id, field_changed, old_value, new_value, changed_at
+        FROM person_history
+        WHERE person_id = ?
+        ORDER BY changed_at DESC
+    """, (person_id,))
+    
+    return [dict(row) for row in cursor.fetchall()]
+
+
+def sync_history_from_firestore(person_id: str, history_entries: list):
+    """
+    Sync history entries from Firestore to SQLite for a specific person.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    for entry in history_entries:
+        entry_id = entry.get("id")
+        if not entry_id:
+            continue
+        
+        # Insert or ignore (don't overwrite existing)
+        cursor.execute("""
+            INSERT OR IGNORE INTO person_history (id, person_id, user_id, field_changed, old_value, new_value, changed_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            entry_id,
+            person_id,
+            entry.get("user_id", ""),
+            entry.get("field_changed", ""),
+            entry.get("old_value"),
+            entry.get("new_value", ""),
+            entry.get("changed_at")
+        ))
+    
+    conn.commit()
 
 
 # Initialize on import

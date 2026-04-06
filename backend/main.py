@@ -24,6 +24,7 @@ from fastapi.responses import JSONResponse
 from models import (
     Person, 
     PersonCreate, 
+    PersonHistoryEntry,
     FaceData, 
     RecognitionResult,
     WebSocketMessage
@@ -36,7 +37,9 @@ from database import (
     get_person,
     update_embedding,
     update_face_image,
-    delete_person
+    delete_person,
+    add_history_entry,
+    get_person_history
 )
 from face_recognition import get_recognizer
 from firebase_sync import (
@@ -45,7 +48,9 @@ from firebase_sync import (
     sync_embedding_to_firebase,
     delete_person_from_firebase,
     add_update_listener,
-    notify_update
+    notify_update,
+    sync_history_to_firebase,
+    get_person_history_from_firebase
 )
 
 # Gemini Flash integration for reflection/summarization (NOT realtime)
@@ -598,12 +603,37 @@ async def create_person(person: PersonCreate, user_id: str = Depends(get_current
 
 @app.put("/people/{person_id}", response_model=Person)
 async def update_person(person_id: str, person: PersonCreate, user_id: str = Depends(get_current_user)):
-    """Update an existing person's details."""
+    """Update an existing person's details and track changes in history."""
     from database import update_person as db_update_person
     
     existing = get_person(person_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Person not found")
+    
+    # Track changes for history
+    from config import ADMIN_UID
+    fields_to_track = ['name', 'relation', 'context', 'last_met']
+    for field in fields_to_track:
+        old_val = existing.get(field, '') or ''
+        new_val = getattr(person, field, '') or ''
+        if old_val != new_val:
+            entry_id = add_history_entry(
+                person_id=person_id,
+                user_id=user_id,
+                field_changed=field,
+                old_value=old_val,
+                new_value=new_val
+            )
+            # Sync history to Firebase (skip for admin)
+            if user_id != ADMIN_UID:
+                sync_history_to_firebase(
+                    person_id=person_id,
+                    user_id=user_id,
+                    entry_id=entry_id,
+                    field_changed=field,
+                    old_value=old_val,
+                    new_value=new_val
+                )
     
     success = db_update_person(
         person_id=person_id,
@@ -624,7 +654,6 @@ async def update_person(person_id: str, person: PersonCreate, user_id: str = Dep
     recognizer.update_person_data(person_id, updated_person)
     
     # Sync to Firebase (skip for admin — admin edits stay local only)
-    from config import ADMIN_UID
     if user_id != ADMIN_UID:
         sync_person_to_firebase(updated_person, user_id=user_id)
     
@@ -718,6 +747,41 @@ async def remove_person(person_id: str, user_id: str = Depends(get_current_user)
     
     print(f"[API] Deleted person: {person_id}")
     return {"status": "deleted", "person_id": person_id}
+
+
+@app.get("/people/{person_id}/history", response_model=List[PersonHistoryEntry])
+async def get_history(person_id: str, user_id: str = Depends(get_current_user)):
+    """
+    Get change history for a person.
+    Returns list of history entries ordered by most recent first.
+    """
+    # Check person exists
+    existing = get_person(person_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Person not found")
+    
+    # Try to get from local DB first
+    history = get_person_history(person_id)
+    
+    # If empty, try Firebase (in case history was synced from another device)
+    if not history:
+        from config import ADMIN_UID
+        if user_id != ADMIN_UID:
+            firebase_history = get_person_history_from_firebase(person_id, user_id)
+            if firebase_history:
+                # Convert to expected format
+                history = []
+                for entry in firebase_history:
+                    history.append({
+                        "id": entry.get("id", ""),
+                        "person_id": person_id,
+                        "field_changed": entry.get("field_changed", ""),
+                        "old_value": entry.get("old_value"),
+                        "new_value": entry.get("new_value", ""),
+                        "changed_at": entry.get("changed_at", "")
+                    })
+    
+    return history
 
 
 # ============================================================================

@@ -45,6 +45,7 @@ export function getWsUrl(token?: string): string {
 export const API = {
     people: `${API_BASE}/people`,
     registerFace: (id: string) => `${API_BASE}/register-face/${id}`,
+    personHistory: (id: string) => `${API_BASE}/people/${id}/history`,
     transcribeAndExtract: `${API_BASE}/api/transcribe-and-extract`,
     askGemini: `${API_BASE}/api/ask-gemini`,
 };

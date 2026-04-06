@@ -241,3 +241,68 @@ def get_all_people_from_firebase(timeout_seconds: float = 10.0) -> List[Dict[str
     except Exception as e:
         print(f"[Firebase] Fetch error: {e}")
         return []
+
+
+# ============================================
+# History Sync Functions
+# ============================================
+
+def sync_history_to_firebase(
+    person_id: str,
+    user_id: str,
+    entry_id: str,
+    field_changed: str,
+    old_value: str,
+    new_value: str
+):
+    """
+    Sync a history entry to Firebase Firestore.
+    Stored under /users/{user_id}/people/{person_id}/history/{entry_id}
+    """
+    if not _initialized or not _db or not user_id:
+        return
+    
+    try:
+        doc_data = {
+            "field_changed": field_changed,
+            "old_value": old_value,
+            "new_value": new_value,
+            "changed_at": firestore.SERVER_TIMESTAMP,
+        }
+        
+        _db.collection("users").document(user_id).collection("people").document(person_id).collection("history").document(entry_id).set(doc_data)
+        print(f"[Firebase] Synced history entry {entry_id} for person {person_id}")
+        
+    except Exception as e:
+        print(f"[Firebase] History sync error: {e}")
+
+
+def get_person_history_from_firebase(person_id: str, user_id: str) -> List[Dict[str, Any]]:
+    """
+    Fetch all history entries for a person from Firestore.
+    Returns list of history entries ordered by changed_at descending.
+    """
+    if not _initialized or not _db or not user_id:
+        return []
+    
+    try:
+        history_ref = _db.collection("users").document(user_id).collection("people").document(person_id).collection("history")
+        docs = history_ref.order_by("changed_at", direction=firestore.Query.DESCENDING).stream()
+        
+        result = []
+        for doc in docs:
+            data = doc.to_dict()
+            if data:
+                data["id"] = doc.id
+                data["person_id"] = person_id
+                data["user_id"] = user_id
+                # Convert Firestore timestamp to ISO string
+                if data.get("changed_at"):
+                    data["changed_at"] = data["changed_at"].isoformat() if hasattr(data["changed_at"], 'isoformat') else str(data["changed_at"])
+                result.append(data)
+        
+        return result
+        
+    except Exception as e:
+        print(f"[Firebase] History fetch error: {e}")
+        return []

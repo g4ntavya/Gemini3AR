@@ -31,6 +31,16 @@ export interface Person {
     language: string;     // ISO 639-1 language code (en, zh, ar, es, etc.)
 }
 
+// Person history entry for tracking changes
+export interface PersonHistoryEntry {
+    id: string;
+    person_id: string;
+    field_changed: string;  // 'name', 'relation', 'context', 'last_met'
+    old_value: string | null;
+    new_value: string;
+    changed_at: string;  // ISO timestamp
+}
+
 // Recognition result from backend
 export interface RecognitionResult {
     track_id: string;
