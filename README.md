@@ -2,6 +2,8 @@
 
 A real-time face recognition system with AR overlays, designed to help people with memory challenges recognize and remember the people in their lives.
 
+Try it Out at RemindAR.tech, it's fully deployed :)
+
 ---
 
 ## Demo Video
