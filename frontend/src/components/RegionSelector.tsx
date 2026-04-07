@@ -108,7 +108,7 @@ export function RegionSelector({ currentRegion, regions, onSelect }: RegionSelec
                 ref={buttonRef}
                 onClick={toggleDropdown}
                 onTouchEnd={toggleDropdown}
-                className="text-[10px] sm:text-sm md:text-base px-3 py-2 md:px-4 md:py-3 border border-black/20 text-black/60 hover:bg-remindar-button-brown hover:text-remindar-button-text hover:border-remindar-button-brown transition-all duration-300 cursor-pointer flex items-center gap-1.5 md:gap-2"
+                className="text-[10px] sm:text-sm md:text-base px-3 md:px-4 h-[31px] sm:h-9 md:h-12 border border-black/20 text-black/60 hover:bg-remindar-button-brown hover:text-remindar-button-text hover:border-remindar-button-brown transition-all duration-300 cursor-pointer flex items-center gap-1.5 md:gap-2"
                 style={{ fontFamily: 'Mileast', fontStyle: 'italic' }}
                 title="Select your region for voice optimization"
             >

@@ -649,7 +649,7 @@ export function LandingPage({ onStartDemo, user, onSignIn, onLogout, region, all
                                                         <button
                                                             onClick={(e) => { e.preventDefault(); onLogout(); }}
                                                             onTouchEnd={(e) => { e.preventDefault(); onLogout(); }}
-                                                            className="text-[10px] sm:text-sm md:text-base px-4 py-2 md:px-6 md:py-3 border border-black/20 text-black/60 hover:bg-remindar-button-brown hover:text-remindar-button-text hover:border-remindar-button-brown transition-all duration-300 relative z-50 cursor-pointer"
+                                                            className="text-[10px] sm:text-sm md:text-base px-4 md:px-6 h-[31px] sm:h-9 md:h-12 border border-black/20 text-black/60 hover:bg-remindar-button-brown hover:text-remindar-button-text hover:border-remindar-button-brown transition-all duration-300 relative z-50 cursor-pointer flex items-center justify-center"
                                                             style={{ fontFamily: 'Mileast', fontStyle: 'italic' }}
                                                         >
                                                             Log Out
