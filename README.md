@@ -96,22 +96,39 @@ Open `https://localhost:5173` and allow camera access.
 - **Hover-activated blur box**: Appears on hover (desktop) or tap (mobile)
 - **Auto-fade**: Box fades after 3 seconds of inactivity
 
+### Pending People Notifications
+- **Smart detection**: Unknown faces visible for 3+ minutes trigger a gentle notification
+- **macOS-style alerts**: Beautiful slide-in notifications that ask "Save this person?"
+- **Queue system**: Hit "Later" and the person gets saved in a collapsible queue
+- **Auto-expiry**: Queue entries expire after 2 hours so you're never overwhelmed
+- **One-tap save**: Add people from the queue anytime from the Dashboard
+
+### Native Language Support
+- **Speak in your language**: Voice registration works in English, Hindi, and Hinglish
+- **Text-to-speech**: Dashboard reads person info aloud in your preferred language
+- **Regional optimization**: Select your region for better voice recognition accuracy
+- **No translation needed**: Just speak naturally and Gemini handles the rest
+
 ### Voice Registration (Gemini 3.0 flash)
 - Speak naturally in your language
 - Gemini transcribes + extracts structured data in ONE call
-- Supports English, Hindi, and Hinglish!
+- Supports English, Hindi, and Hinglish out of the box
 
-### Ask Gemini - Context Memory Queries
+### Ask Gemini - Context Memory & Queries
 - Tap the **Ask** button to query your contact memory
-- Ask questions like "Who did I talk to about coffee?"
-- Gemini searches your people database and responds naturally
-- **Gemini Insights** overlay shows matched people with context along with date.
+- Ask questions like "Who did I talk to about coffee?" or "When did I last see Sarah?"
+- **Contextual search**: Gemini searches across names, relations, contexts, and timestamps
+- **Smart insights**: Get matched people with full context and dates
+- **Conversation history**: See when you last met each person
+- **Natural responses**: Gemini answers in plain language, like a helpful assistant
 
 ### Dashboard Sidebar
 - **Swipeable cards**: iOS-style swipe-to-reveal edit/delete actions
 - **Search**: Filter by name, relation, or context
 - **Newest first**: Most recent entries appear at the top
 - **Text-to-speech**: Read person info aloud
+- **Pending queue**: Collapsible section shows people you've chosen to save for later
+- **Quick actions**: Add or remove pending people with unified button styling
 
 ### Mobile & iOS Support
 - **Fullscreen camera** on mobile devices
@@ -123,10 +140,23 @@ Open `https://localhost:5173` and allow camera access.
 
 ## Registering Faces
 
+Three ways to save people:
+
+### 1. Instant Registration
 1. Click "Add this person" on an unknown face
 2. Click "Speak" and say something like: "That's Sarah, my doctor, she prescribed medication"
 3. Form auto-fills with extracted info (name, relation, context)
 4. Click Save
+
+### 2. Pending Notifications
+1. Talk to someone for 3+ minutes
+2. RemindAR shows a notification: "Save this person?"
+3. Choose "Yes" to register immediately, "Later" to save for later, or "No" to dismiss
+
+### 3. From the Queue
+1. Open the Dashboard sidebar
+2. Click "Queue (n)" to see pending people
+3. Review and add them when you're ready (or they'll expire in 2 hours)
 
 ---
 
@@ -148,20 +178,26 @@ Backend (FastAPI + Python)
 
 ### Gemini Integration
 
+Gemini 3.0 flash powers three major features:
+
 ```
 Voice Registration:
-User speaks → Gemini 3.0 flash → { transcription, name, relation, context }
-                 (single API call)
+User speaks (any language) → Gemini 3.0 flash → { transcription, name, relation, context }
+                              (single API call)
 
-Context Queries:
-User asks → Gemini 3.0 flash → { answer, matched people }
-                 (searches your database)
-                 
+Context Memory Queries:
+User asks "Who did I meet last week?" → Gemini 3.0 flash → { answer, matched people, dates }
+                                         (searches your database + timestamps)
+
+Regional Voice Optimization:
+Select your region → Optimized voice recognition → Better accuracy in your language
+                                  
 Benefits:
 ✅ Hindi/Hinglish works seamlessly
-✅ Single API call (fast)
+✅ Single API call (blazing fast)
 ✅ Better context understanding
 ✅ No local model downloads
+✅ Natural conversation history tracking
 ```
 
 ---
@@ -183,21 +219,24 @@ RemindAR/
 │   ├── src/
 │   │   ├── App.tsx
 │   │   ├── components/
-│   │   │   ├── AROverlay.tsx        # Face labels with hover box
-│   │   │   ├── AskGeminiButton.tsx  # Voice query button
-│   │   │   ├── DashboardSidebar.tsx # People management
-│   │   │   ├── SwipeableCard.tsx    # iOS-style swipe cards
-│   │   │   └── GeminiResponseOverlay.tsx
+│   │   │   ├── AROverlay.tsx                  # Face labels with hover box
+│   │   │   ├── AskGeminiButton.tsx            # Voice query button
+│   │   │   ├── DashboardSidebar.tsx           # People management + pending queue
+│   │   │   ├── SwipeableCard.tsx              # iOS-style swipe cards
+│   │   │   ├── PendingPersonNotification.tsx  # macOS-style notifications
+│   │   │   └── GeminiResponseOverlay.tsx      # Context query results
 │   │   ├── hooks/
 │   │   │   ├── useFaceDetection.ts
 │   │   │   ├── useWebSocket.ts
-│   │   │   └── useSpeechToText.ts
+│   │   │   ├── useSpeechToText.ts
+│   │   │   ├── usePendingPeople.ts            # Notification system
+│   │   │   └── useUserRegion.ts               # Language region selector
 │   │   └── styles/
-│   │       └── index.css            # Global styles + fonts
+│   │       └── index.css                      # Global styles + fonts
 │   ├── public/
-│   │   ├── fonts/                   # Helvetica Neue, Rozha One
-│   │   └── manifest.json            # PWA config
-│   └── vite.config.ts               # HTTPS + proxy config
+│   │   ├── fonts/                             # Helvetica Neue, Rozha One
+│   │   └── manifest.json                      # PWA config
+│   └── vite.config.ts                         # HTTPS + proxy config
 │
 └── README.md
 ```
@@ -252,4 +291,22 @@ MIT
 
 ---
 
-Built for people with memory challenges and their caregivers.
+## What Makes RemindAR Special
+
+RemindAR isn't just another face recognition app. It's designed from the ground up for people dealing with memory challenges, whether from dementia, Alzheimer's, or just the general chaos of meeting too many people.
+
+**The thoughtful bits:**
+- Notifications only appear after 3+ minutes of conversation, so you're not bombarded constantly
+- The "Later" queue lets you defer decisions without losing track of people
+- Native language support means grandma can use it in Hindi without switching mental gears
+- Context queries remember not just who people are, but when you last saw them and what you talked about
+- Everything expires gracefully - queued faces disappear after 2 hours so you're not managing ancient unknowns
+
+**The technical bits:**
+- Client-side face detection means your video never leaves your device
+- WebSocket recognition is instant - no waiting around for HTTP requests
+- Gemini does the heavy lifting for voice and context, so no massive model downloads
+- Firebase sync means your data follows you across devices
+- PWA support means it works like a native app on your phone
+
+Built with care for people with memory challenges and their caregivers.
