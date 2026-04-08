@@ -596,47 +596,7 @@ function App() {
                 onLater={(p) => { setTestNotification(null); handlePendingLater(p); }}
             />
 
-            {/* TEMPORARY TEST BUTTON - For demo video recording only */}
-            {isDemoActive && (
-                <button
-                    style={{
-                        position: 'fixed',
-                        bottom: 20,
-                        right: 20,
-                        zIndex: 9999,
-                        padding: '10px 16px',
-                        background: 'rgba(255, 107, 107, 0.9)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 8,
-                        cursor: 'pointer',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        backdropFilter: 'blur(10px)',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                    }}
-                    onClick={() => {
-                        // Try to get a real face image from current faces
-                        let faceImage = '';
-                        for (const [trackId] of faces) {
-                            const img = getFaceImageForTrack(trackId);
-                            if (img) {
-                                faceImage = img;
-                                break;
-                            }
-                        }
-                        setTestNotification({
-                            trackId: 'test-' + Date.now(),
-                            faceImage,
-                            firstSeen: Date.now() - 3 * 60 * 1000,
-                            duration: 180,
-                            expiresAt: Date.now() + 2 * 60 * 60 * 1000,
-                        });
-                    }}
-                >
-                    Test Notification
-                </button>
-            )}
+
         </div>
     );
 }

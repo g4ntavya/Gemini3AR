@@ -8,9 +8,9 @@ Try it Out at RemindAR.tech, it's fully deployed :)
 
 ## Demo Video
 
-[![RemindAR Demo](https://img.youtube.com/vi/m9yXQxvuMcw/hqdefault.jpg)](https://youtu.be/m9yXQxvuMcw)
+[![RemindAR Demo](https://img.youtube.com/vi/mT_SqgR1IzM/hqdefault.jpg)](https://youtu.be/mT_SqgR1IzM)
 
-[Watch on YouTube](https://youtu.be/m9yXQxvuMcw)
+[Watch on YouTube](https://youtu.be/mT_SqgR1IzM)
 
 ---
 
